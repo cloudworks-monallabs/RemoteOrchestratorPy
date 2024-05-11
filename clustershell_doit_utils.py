@@ -235,8 +235,8 @@ def gen_task_local_exec(func,
     if hasattr(func, 'targets'):
         trec['targets'] = func.targets
 
-    if hasattr(func, 'watch'):
-        trec['watch'] = func.watch
+    # if hasattr(func, 'watch'):
+    #     trec['watch'] = func.watch
 
     if hasattr(func, 'file_dep'):
         trec['file_dep'] = func.file_dep
@@ -250,7 +250,8 @@ def gen_task_remote_exec(cmdstr,
                          label=None,
                          is_dep_task=False,
                          deps=[],
-                         fabric_conn=None
+                         fabric_conn=None,
+                         ipv6=None
                          ):
     """
     assumption:
@@ -283,6 +284,8 @@ def gen_task_remote_exec(cmdstr,
         # use function name as basename/exec_cmd_label
         pass
 
+    else:
+        cmdstr_value = cmdstr
     rec = {'name': name,
            'actions': [(remote_exec_cmd, [target_nodeset, cmdstr_value, f"{label}_{name}"
                                           ])],
@@ -295,11 +298,30 @@ def gen_task_remote_exec(cmdstr,
     if deps:
         rec['task_dep'] = [get_ref_name(_) for _ in deps]
 
-    rec['uptodate'] = []
-    if fabric_conn is not None:
+    rec['uptodate'] = [run_once]
+    # fabric_conn is not cacheable
+    # if fabric_conn is not None:
+    #     if callable(cmdstr):
+    #         if hasattr(cmdstr, 'remote_targets'):
+    #             def check_remote_files_exists_local(remote_targets, fabric_conn=fabric_conn):
+    #                 for _fs in remote_targets:
+    #                     if not exists(fabric_conn, _fs):
+    #                         print(
+    #                             f"Path {_fs} does not exits")
+    #                         return False
+
+    #                 return True
+    #             remote_targets = cmdstr.remote_targets
+    #             rec['uptodate'].append((check_remote_files_exists_local, [remote_targets])
+
+    #                                    )
+    if ipv6 is not None:
+        # if cmdstr is actually a function
         if callable(cmdstr):
+            # if remote_targets are specified
             if hasattr(cmdstr, 'remote_targets'):
-                def check_remote_files_exists_local(remote_targets, fabric_conn=fabric_conn):
+                def check_remote_files_exists_local(remote_targets, ipv6=ipv6):
+                    fabric_conn = Connection(ipv6, user=ssh_user)
                     for _fs in remote_targets:
                         if not exists(fabric_conn, _fs):
                             print(
@@ -308,8 +330,8 @@ def gen_task_remote_exec(cmdstr,
 
                     return True
                 remote_targets = cmdstr.remote_targets
-                rec['uptodate'] = [(check_remote_files_exists_local, [remote_targets])
-                                   ]
+                rec['uptodate'].append((check_remote_files_exists_local, [remote_targets])
+                                       )
 
     return rec
 
@@ -375,8 +397,11 @@ def gen_task_ship_files(files_to_ship,
         rec['basename'] = label
 
     if fabric_conn:
+        print("===================> ship-files: local-remote dependency")
 
-        def check_remote_files_exists_local(files_to_ship, remote_dir, fabric_conn=fabric_conn):
+        def check_remote_files_exists_local(files_to_ship,
+                                            remote_dir,
+                                            fabric_conn=fabric_conn):
             for _fs in files_to_ship:
                 if not exists(fabric_conn, f"{remote_dir}/{Path(_fs).name}"):
                     print(f"Path {remote_dir}/{Path(_fs).name} does not exits")
@@ -392,6 +417,7 @@ def gen_task_ship_files(files_to_ship,
 
 def gen_task_fetch_files(files_to_fetch,
                          target_nodeset,
+                         ipv6,
                          label,
                          id_args=[],
                          local_dir="/tmp",
@@ -410,7 +436,7 @@ def gen_task_fetch_files(files_to_fetch,
                                    local_dir,
                                    f"{label}_{name}"])
                     ],
-        'targets': [f"{local_dir}/{Path(_).name}" for _ in files_to_fetch
+        'targets': [f"{local_dir}/{Path(_).name}.{ipv6}" for _ in files_to_fetch
 
                     ],
         'uptodate': [run_once],
@@ -464,7 +490,8 @@ def doit_task_generator_for_RTAS(rt_tag,
         if calc_dep:
             dummy_task = {'actions': [do_nothing],
                           'basename': f"{rt_tag}_dummy",
-                          'name': "_".join([ipv6, *id_args])
+                          'name': "_".join([ipv6, *id_args]),
+                          'uptodate': [run_once]
                           }
 
             dummy_task['calc_dep'] = calc_dep
@@ -475,8 +502,8 @@ def doit_task_generator_for_RTAS(rt_tag,
             trec_lsp = gen_task_local_exec(local_steps_pre,
                                            [ipv6, *id_args],
                                            label=f"{rt_tag}_lspre",
-                                           deps=[*pre_deps,
-                                                 ]
+                                           deps=pre_deps,
+
 
                                            )
 
@@ -505,12 +532,14 @@ def doit_task_generator_for_RTAS(rt_tag,
                                            label=f"{rt_tag}_rs",
                                            is_dep_task=True,
                                            deps=[*pre_deps, *deps],
-                                           fabric_conn=fabric_conn
+                                           # fabric_conn=fabric_conn,
+                                           ipv6=ipv6
                                            )
             if to_ship_files:
                 # make the task dependent on shipped files
                 remote_files = [
                     f"{remote_work_dir}/{Path(_fs).name}" for _fs in to_ship_files]
+                # TODO: This probably is not working
                 trec_rs['uptodate'].append(
                     RemoteFilesDep(ipv6, remote_files, ssh_user=ssh_user))
 
@@ -523,12 +552,16 @@ def doit_task_generator_for_RTAS(rt_tag,
         if from_ship_files:
             trec_ff = gen_task_fetch_files(from_ship_files,
                                            target_nodeset,
+                                           ipv6,
                                            label=f"{rt_tag}_ff",
                                            id_args=[ipv6, *id_args],
                                            local_dir=local_work_dir,
                                            is_dep_task=True,
-                                           deps=[*pre_deps, *deps]
+                                           deps=[*pre_deps, *deps],
+
                                            )
+            trec_ff['uptodate'].append(
+                RemoteFilesDep(ipv6, from_ship_files, ssh_user=ssh_user))
             pre_deps = []
             deps = [deepcopy(trec_ff)]
             yield trec_ff
