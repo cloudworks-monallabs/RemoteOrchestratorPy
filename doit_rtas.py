@@ -169,7 +169,11 @@ class RemoteTaskActionSequence:
         self.final_task = f"{self.basename}:local_step_pre"
         pass
 
-    def set_task_ship_files_iter(self, files_to_ship, dest_dir):
+    def set_task_ship_files_iter(self, files_to_ship, dest_dir, **kwargs):
+        
+        """
+        kwargs: task_dep 
+        """
         self.task_ship_files_prefix = {'basename': self.basename,
                                       'name': f"ship_files_prefix",
                                       'task_dep': [],
@@ -184,6 +188,10 @@ class RemoteTaskActionSequence:
         
         self.task_dep = []
 
+        if 'task_dep' in kwargs:
+            self.task_ship_files_prefix['task_dep'].append(kwargs.get('task_dep')
+                                                           )
+            
         
         def ship_task_iter():
             for file_to_ship in files_to_ship:
