@@ -146,7 +146,7 @@ class RemoteTaskActionSequence:
             'name': "local_step_pre",
             'task_dep' : kwargs.get('task_dep', []),
             'actions': [(step_func, args)],
-            'doc': f"""{self.task_label}: {kwargs.get("doc", "local-step-pre")}"""
+            'doc': f"""{self.task_label}:{kwargs.get("doc", "local-step-pre")}"""
             }
         
         if 'targets' in kwargs:
@@ -241,7 +241,7 @@ class RemoteTaskActionSequence:
         self.task_ship_files_iter  = ship_task_iter()
         self.task_ship_files_group = trec
         self.final_task = f"{self.basename}:ship_files"
-        
+
     def set_task_remote_step(self, *args, **kwargs):
         """
         args is a list of string
@@ -304,6 +304,105 @@ class RemoteTaskActionSequence:
         self.final_task = f"{self.basename}:remote_step"
         pass
 
+
+    def set_task_remote_step_iter(self, *args, **kwargs):
+        """
+        args is a list of string
+        each a command to be run on remote machine
+        kwargs['targets'] impiles remote targets
+        
+        
+        """
+
+        # all the task records 
+        remote_step_trecs = []
+        def append(cmd, label, **kwargs):
+            trec = {
+                'basename': self.basename,
+                'name': f"remote_step:{label}",
+                'actions': [(remote_exec_cmd, [self,
+                                               f"{self.basename}:remote_step:{label}",
+                                               cmd])],
+                'doc': f"{self.task_label}: remote step : {label}",
+                }
+
+
+            trec['uptodate'] = kwargs.get('uptodate', [])
+            trec['task_dep'] = kwargs.get('task_dep', [])
+
+            # local_file_dep is dependency on local file and not on the files on remote destination 
+            if 'local_file_dep' in kwargs:
+                trec['file_dep'] = kwargs.get('local_file_dep')
+            
+        
+            #target implies remote targets
+            if 'targets' in kwargs:
+                trec['uptodate'].append((check_remote_files_exists,
+                                         [self.active_conn, kwargs.get('targets')]
+                                         )
+                                        )
+            
+
+            #file_dep implies remote file_dep
+            if 'file_dep' in kwargs:
+                trec['uptodate'].append(RemoteFilesDep(self.active_conn,
+                                                       kwargs.get('file_dep')
+                                                       )
+                                        )
+            remote_step_trecs.append(trec)
+
+            # not adding the shipped files as dependency
+            # done
+            
+
+
+            # #TODO:
+            # # make task_ship_files as task dep 
+            # if self.task_ship_files_iter:
+            #     trec['task_dep'].append(f"{self.basename}:ship_files"
+
+            #                             )
+            
+            if self.task_dep:
+                trec['task_dep'].extend(self.task_dep)
+                self.task_dep = []
+
+                
+        def finalize():
+            assert len(remote_step_trecs) > 1
+            # put the task_dep on the first task
+            if self.task_dep:
+                remote_step_trecs[0]['task_dep'] = [self.task_dep]
+                self.task_dep= []
+            # chain the task dependecies
+            
+            num_tasks = len(remote_step_trecs)
+            for idx in range(1, num_tasks):
+                remote_step_trecs[idx]['task_dep'] = [get_ref_name(remote_step_trecs[idx-1])]
+                
+            self.remote_step_iter_final_trec = {
+                'basename': self.basename,
+                'name': 'remote_step',
+                'actions': None,
+                'task_dep': [get_ref_name(remote_step_trecs[-1])]
+
+                }
+            self.remote_step_iter_final_task = f"{self.basename}:remote_step"
+
+        self.task_remote_step_iter = remote_step_trecs
+        self.remote_step_iter_finalize = finalize
+
+        # TODO: yield the final task which will have
+        # dependency of last task iter
+
+        self.final_task = f"{self.basename}:remote_step"
+        
+        return append
+    
+    
+        pass
+
+    
     def set_task_fetch_files_iter(self,
                                   files_to_fetch,
                                   local_dir="/tmp"):
@@ -406,7 +505,10 @@ class RemoteTaskActionSequence:
 
     def __iter__(self):
 
+        # prefix task must be send
+    
         task_curr = None
+        
         if self.task_local_step_pre:
             task_curr = get_ref_name(self.task_local_step_pre)
 
@@ -430,6 +532,17 @@ class RemoteTaskActionSequence:
                 self.task_remote_step["task_dep"].append(task_curr)
             task_curr = get_ref_name(self.task_remote_step)
             yield self.task_remote_step
+
+        elif self.task_remote_step_iter:
+            self.remote_step_iter_finalize()
+            
+            if task_curr:
+                self.task_remote_step_iter[0]['task_dep'].append(task_curr)
+            
+            task_curr = self.remote_step_iter_final_task
+            yield from self.task_remote_step_iter
+            yield self.remote_step_iter_final_trec
+                
             
         if self.task_fetch_files_iter:
             if task_curr:
@@ -458,7 +571,11 @@ class RemoteTaskActionSequence:
 
         yield trec
 
-    def set_task_label(self, basename, id_args= []):
+    def set_new_task_seq(self, basename,
+                         id_args= []):
+        """
+        task_dep  will be anchored on to prefix task
+        """
         self.basename = f"""{basename}:{self.ipv6}:{ "_".join([str(_) for _ in id_args])}"""
         self.task_local_step_pre = None
         self.task_ship_files_iter = None
@@ -469,4 +586,5 @@ class RemoteTaskActionSequence:
         self.task_label = f"{self.basename}:rtas"
         # prefix task dependency: the prefix task runs before
         # any task in the rtas
+
         self.task_dep = [f"{basename}_prefix"]
