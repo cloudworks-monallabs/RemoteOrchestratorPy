@@ -21,6 +21,98 @@ from doit_extntools import RemoteFilesDep
 
 logger = logging.getLogger(__name__)
 
+def make_task(func):
+    """make decorated function a task-creator"""
+    #func.create_doit_tasks = func
+    # flip
+    def another_task_func():
+        trec = {'basename': "switched_task",
+                'name': "task1",
+                'actions': ['echo bye'],
+                #'task_dep': [rtas.task_label]
+                }
+        yield trec
+
+    another_task_func.create_doit_tasks = another_task_func
+    return another_task_func
+
+
+# def doit_taskify(func):
+#     """
+#     convert a function to a rtas task sequence generator function.
+#     prefix and suffix task will be added. 
+#     """
+#     print ("did we ever got called")
+#     rtas_basename = func.__name__
+#     def doit_task(rtas):
+#         print("create task for rtas with ipv6 = ", rtas.ipv6)
+#         trec = {'basename': f"{rtas_basename}_prefix",
+#                 'actions': None,
+#                 }
+#         yield trec
+        
+#         rtas.set_new_task_seq(rtas_basename)
+#         yield from rtas
+        
+        
+#         yield trec
+        
+
+#     trec = {'basename': rtas_basename,
+#             'actions': None,
+#             'task_dep': [rtas.task_label]
+#             }
+        
+#     yield trec
+    
+#     # make doit read tasks from this function
+#     doit_task.create_doit_tasks = doit_task
+
+#     return doit_task
+
+
+def doit_taskify(rtas, **kwargs):
+    #assert rtas is not None
+    def wrapper(func):
+        """
+        convert a function to a rtas task sequence generator function.
+        prefix and suffix task will be added. 
+        """
+        rtas_basename = func.__name__
+        
+        
+        def hook_for_set_new_task(*arg, **kwargs):
+            assert False
+            
+        def doit_task():
+            #prefix for rtas task sequence
+            trec = {'basename': f"{rtas_basename}_prefix",
+                    'actions': None,
+                    'task_dep': kwargs.get('task_dep', [])
+                    
+                    }
+            yield trec
+            rtas.set_new_task_seq(rtas_basename)
+            #call user func to create rtas tasks
+            func(rtas)
+            # ========================== end =========================
+            
+            # disable set_new_seq for now
+            #rtas.set_new_task_seq = None
+            yield from rtas
+
+            # group task representing rtas
+            trec = {'basename': rtas_basename,
+                    'actions': None,
+                    'task_dep': [rtas.task_label]
+                    }
+        
+            yield trec
+
+        doit_task.create_doit_tasks = doit_task
+        return doit_task
+    return wrapper
+
 
 def remote_exec_cmd(self,  task_label, *args):
 
@@ -580,6 +672,7 @@ class RemoteTaskActionSequence:
         self.task_local_step_pre = None
         self.task_ship_files_iter = None
         self.task_remote_step = None
+        self.task_remote_step_iter = None
         self.task_fetch_files_iter = None
         self.task_local_step_post = None
         self.final_task = None
