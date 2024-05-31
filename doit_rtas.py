@@ -69,8 +69,51 @@ def make_task(func):
 #     doit_task.create_doit_tasks = doit_task
 
 #     return doit_task
+def doit_taskify_multinode_single_task_seq(computeInstances, get_rtas, **kwargs):
+    """
+    create only one rtas per compute node .
+    computeInstances: its a list/iterator; each item, ci,  is a data structure
+    for a compute node on which to run the task
+    get_rtas : a function that takes, ci, and returns the rtas for
+    that compute node
+    """
+    def wrapper(func):
+        """
+        convert a function to a rtas task sequence generator function.
+        prefix and suffix task will be added. 
+        """
+        rtas_basename = func.__name__
+        def doit_task():
+            #prefix for rtas task sequence
+            trec = {'basename': f"{rtas_basename}_prefix",
+                    'actions': None,
+                    'task_dep': kwargs.get('task_dep', [])
 
+                    }
+            yield trec
 
+            rtas_tasks = []
+            for ci in computeInstances:
+                rtas = get_rtas(ci)
+                rtas.set_new_task_seq(rtas_basename)
+                func(ci)
+                rtas_tasks.append(rtas.task_label)
+                yield from rtas
+                
+
+            # group task representing rtas
+            trec = {'basename': rtas_basename,
+                    'actions': None,
+                    'task_dep': rtas_tasks
+                    }
+
+            yield trec
+
+        doit_task.create_doit_tasks = doit_task
+        return doit_task
+    return wrapper
+
+    
 def doit_taskify(rtas, **kwargs):
     #assert rtas is not None
     def wrapper(func):
@@ -79,8 +122,6 @@ def doit_taskify(rtas, **kwargs):
         prefix and suffix task will be added. 
         """
         rtas_basename = func.__name__
-        
-        
         def hook_for_set_new_task(*arg, **kwargs):
             assert False
             
