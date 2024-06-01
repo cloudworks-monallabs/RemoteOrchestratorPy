@@ -7,18 +7,18 @@ Things to keep in mind:
 - consistent naming
 - uptodate
 """
-from pipeline_constants import *
+
+
 from doit_rtas_helpers import (log_command_exec_status,
                                ship_file,
                                fetch_file,
                                get_ref_name
                                )
-from fabric import Connection
-from fabric import Connection, Config
-from patchwork.files import exists
-import logging
-from doit_extntools import RemoteFilesDep
 
+from patchwork.files import exists
+from doit_extntools import RemoteFilesDep
+from pathlib import Path
+import logging
 logger = logging.getLogger(__name__)
 
 def make_task(func):
@@ -69,13 +69,9 @@ def make_task(func):
 #     doit_task.create_doit_tasks = doit_task
 
 #     return doit_task
-def doit_taskify_multinode_single_task_seq(computeInstances, get_rtas, **kwargs):
+def doit_taskify(all_rtas, **kwargs):
     """
-    create only one rtas per compute node .
-    computeInstances: its a list/iterator; each item, ci,  is a data structure
-    for a compute node on which to run the task
-    get_rtas : a function that takes, ci, and returns the rtas for
-    that compute node
+    all_rtas: list of RemoteTaskActionSequence. Each rtas represents a compte node on which to invoke action sequence
     """
     def wrapper(func):
         """
@@ -84,7 +80,7 @@ def doit_taskify_multinode_single_task_seq(computeInstances, get_rtas, **kwargs)
         """
         rtas_basename = func.__name__
         def doit_task():
-            #prefix for rtas task sequence
+            #setup group task
             trec = {'basename': f"{rtas_basename}_prefix",
                     'actions': None,
                     'task_dep': kwargs.get('task_dep', [])
@@ -92,19 +88,18 @@ def doit_taskify_multinode_single_task_seq(computeInstances, get_rtas, **kwargs)
                     }
             yield trec
 
-            rtas_tasks = []
-            for ci in computeInstances:
-                rtas = get_rtas(ci)
-                rtas.set_new_task_seq(rtas_basename)
-                func(ci)
-                rtas_tasks.append(rtas.task_label)
-                yield from rtas
+
+            
+            for rtas in all_rtas:
+                rtas.set_super_task_seq(rtas_basename)
+                yield from func(rtas)
                 
 
-            # group task representing rtas
+            # the teardown group task:
+            # has task dep to all super and sup rtas teardown task 
             trec = {'basename': rtas_basename,
                     'actions': None,
-                    'task_dep': rtas_tasks
+                    'task_dep': rtas.rtas_taskseq_labels
                     }
 
             yield trec
@@ -114,45 +109,45 @@ def doit_taskify_multinode_single_task_seq(computeInstances, get_rtas, **kwargs)
     return wrapper
 
     
-def doit_taskify(rtas, **kwargs):
-    #assert rtas is not None
-    def wrapper(func):
-        """
-        convert a function to a rtas task sequence generator function.
-        prefix and suffix task will be added. 
-        """
-        rtas_basename = func.__name__
-        def hook_for_set_new_task(*arg, **kwargs):
-            assert False
+# def doit_taskify(rtas, **kwargs):
+#     #assert rtas is not None
+#     def wrapper(func):
+#         """
+#         convert a function to a rtas task sequence generator function.
+#         prefix and suffix task will be added. 
+#         """
+#         rtas_basename = func.__name__
+#         def hook_for_set_new_task(*arg, **kwargs):
+#             assert False
             
-        def doit_task():
-            #prefix for rtas task sequence
-            trec = {'basename': f"{rtas_basename}_prefix",
-                    'actions': None,
-                    'task_dep': kwargs.get('task_dep', [])
+#         def doit_task():
+#             #prefix for rtas task sequence
+#             trec = {'basename': f"{rtas_basename}_prefix",
+#                     'actions': None,
+#                     'task_dep': kwargs.get('task_dep', [])
                     
-                    }
-            yield trec
-            rtas.set_new_task_seq(rtas_basename)
-            #call user func to create rtas tasks
-            func(rtas)
-            # ========================== end =========================
+#                     }
+#             yield trec
+#             rtas.set_new_task_seq(rtas_basename)
+#             #call user func to create rtas tasks
+#             func(rtas)
+#             # ========================== end =========================
             
-            # disable set_new_seq for now
-            #rtas.set_new_task_seq = None
-            yield from rtas
+#             # disable set_new_seq for now
+#             #rtas.set_new_task_seq = None
+#             yield from rtas
 
-            # group task representing rtas
-            trec = {'basename': rtas_basename,
-                    'actions': None,
-                    'task_dep': [rtas.task_label]
-                    }
+#             # group task representing rtas
+#             trec = {'basename': rtas_basename,
+#                     'actions': None,
+#                     'task_dep': [rtas.task_label]
+#                     }
         
-            yield trec
+#             yield trec
 
-        doit_task.create_doit_tasks = doit_task
-        return doit_task
-    return wrapper
+#         doit_task.create_doit_tasks = doit_task
+#         return doit_task
+#     return wrapper
 
 
 def remote_exec_cmd(self,  task_label, *args):
@@ -201,8 +196,6 @@ class RemoteTaskActionSequence:
                  *args,
                  **kwargs):
         """
-        basename: the task basename
-        id_args: a tuple to identify the subtask
         """
         #self.basename = f"""{basename}:{ipv6}:{ "_".join([str(_) for _ in id_args])}"""
         # the label for the group task from this rtas
@@ -218,52 +211,67 @@ class RemoteTaskActionSequence:
         self.task_local_step_post = None
         self.final_task = None
 
+        # to maintain a list of all sub-task sequences label
+        # created for a task sequence
+        self.rtas_subtask_seq_labels = None
 
         # prefix task dependency
         self.task_dep = None
-        
-        connect_kwargs = {
-            "key_filename": f"{cluster_resources_datadir}/{adming_public_key_file}",
-        }
-
-        config = Config(overrides={
-            'connect_kwargs': connect_kwargs,
-            'run': {
-                'hide': True,
-                'warn': True,
-                'echo': True
-            },
-        })
 
 
-        self.user_adming_conn = Connection(host=self.ipv6,
-                                           user="adming",
-                                           config=config
-                                           )
-        self.user_root_conn = Connection(host=self.ipv6,
-                                           user="root",
-                                           config=config
-                                           )
-        
-        self.active_conn = self.user_adming_conn #self.user_root_conn
-        
-        
-    def set_ssh_user(self, user="adming"):
-        if user == "root":
-            self.active_conn = self.user_root_conn
-        else:
+        # a set of ssh users on remote target is maintained
+        # use set_ssh_user to invoke an action on remote target
+        # via choosen user
 
-            self.active_conn = self.user_adming_conn
+        self.ssh_users_fabric_conn = {}
+        
+        # connect_kwargs = {
+        #     "key_filename": f"{cluster_resources_datadir}/{adming_public_key_file}",
+        # }
+
+        # config = Config(overrides={
+        #     'connect_kwargs': connect_kwargs,
+        #     'run': {
+        #         'hide': True,
+        #         'warn': True,
+        #         'echo': True
+        #     },
+        # })
+
+
+        # self.user_adming_conn = Connection(host=self.ipv6,
+        #                                    user="adming",
+        #                                    config=config
+        #                                    )
+        # self.user_root_conn = Connection(host=self.ipv6,
+        #                                    user="root",
+        #                                    config=config
+        #                                    )
+        
+        # self.active_conn = self.user_adming_conn #self.user_root_conn
+        self.active_conn = None
+        
+
+
+    def add_ssh_user(self, user_name, fabric_conn, make_active="False"):
+        self.ssh_users_fabric_conn[user_name] = fabric_conn
+        if make_active:
+            self.active_conn = self.ssh_users_fabric_conn[user_name]
+        
+    def set_active_user(self, user="adming"):
+        assert user in self.ssh_users_fabric_conn
+        
+        self.active_conn = self.ssh_users_fabric_conn[user]
 
         
-    def __del__(self):
-        """
-        cleanup resources
-        """
-        print("Admin connection closed.")
-        self.user_adming_conn.close()
-        self.user_root_conn.close()
-        pass
+    # def __del__(self):
+    #     """
+    #     cleanup resources
+    #     """
+    #     print("Admin connection closed.")
+    #     for user, conn in self.ssh_users_fabric_conn:
+    #         conn.close()
+    #     pass
     
     def set_task_local_step_pre(self,
                            step_func,
@@ -314,12 +322,13 @@ class RemoteTaskActionSequence:
                                       
                                       }
         self.task_ship_files_prefix['task_dep'].extend(self.task_dep)
+        self.task_dep = []
 
         # once you yield the trec ecord to doit
         # it is unsuable
         task_label_ship_files_prefix = get_ref_name(self.task_ship_files_prefix)
         
-        self.task_dep = []
+
 
         if 'task_dep' in kwargs:
             self.task_ship_files_prefix['task_dep'].append(kwargs.get('task_dep')
@@ -435,29 +444,39 @@ class RemoteTaskActionSequence:
             self.task_dep = []
             
         self.final_task = f"{self.basename}:remote_step"
+
         pass
 
 
-    def set_task_remote_step_iter(self, *args, **kwargs):
+    def set_task_remote_step_iter(self):
         """
-        args is a list of string
-        each a command to be run on remote machine
-        kwargs['targets'] impiles remote targets
-        
-        
         """
 
         # all the task records 
         remote_step_trecs = []
-        def append(cmd, label, **kwargs):
-            trec = {
-                'basename': self.basename,
-                'name': f"remote_step:{label}",
-                'actions': [(remote_exec_cmd, [self,
-                                               f"{self.basename}:remote_step:{label}",
-                                               cmd])],
-                'doc': f"{self.task_label}: remote step : {label}",
-                }
+        def append(cmd, label, *args, **kwargs):
+            """
+            if cmd is string-- then the string is executed via fabric.run
+            if cmd is a function -- its assumed that it is using dask to run python code remotely.
+            
+            """
+            if isinstance(cmd, str):
+                trec = {
+                    'basename': self.basename,
+                    'name': f"remote_step:{label}",
+                    'actions': [(remote_exec_cmd, [self,
+                                                   f"{self.basename}:remote_step:{label}",
+                                                   cmd])],
+                    'doc': f"{self.task_label}: remote step : {label}",
+                    }
+            else:
+                #cmd is a dask function
+                trec = {
+                    'basename': self.basename,
+                    'name': f"remote_step:{label}",
+                    'actions': [(cmd, args)],
+                    'doc': f"{self.task_label}: remote step : {label}",
+                    }
 
 
             trec['uptodate'] = kwargs.get('uptodate', [])
@@ -584,7 +603,7 @@ class RemoteTaskActionSequence:
                     'task_dep': [f"{self.basename}:fetch_file:{Path(file_to_fetch).name}" for file_to_fetch in files_to_fetch
                                  
                                  ],
-                    'action': None,
+                    'actions': None,
                     
                     'doc': f"{self.task_label}: group-task: fetch-files"
                     }
@@ -662,6 +681,8 @@ class RemoteTaskActionSequence:
             
         if  self.task_remote_step:
             if task_curr:
+                # remote step already has dependency on ship files
+                # sometimes remote step task dependency can have duplicates
                 self.task_remote_step["task_dep"].append(task_curr)
             task_curr = get_ref_name(self.task_remote_step)
             yield self.task_remote_step
@@ -702,14 +723,17 @@ class RemoteTaskActionSequence:
                 'actions': None
                 }
 
+
         yield trec
 
-    def set_new_task_seq(self, basename,
+    def set_super_task_seq(self, basename,
                          id_args= []):
         """
         task_dep  will be anchored on to prefix task
         """
-        self.basename = f"""{basename}:{self.ipv6}:{ "_".join([str(_) for _ in id_args])}"""
+        
+        self.basename_super = f"""{basename}:{self.ipv6}:{ "_".join([str(_) for _ in id_args])}"""
+        self.basename = self.basename_super
         self.task_local_step_pre = None
         self.task_ship_files_iter = None
         self.task_remote_step = None
@@ -717,8 +741,36 @@ class RemoteTaskActionSequence:
         self.task_fetch_files_iter = None
         self.task_local_step_post = None
         self.final_task = None
-        self.task_label = f"{self.basename}:rtas"
-        # prefix task dependency: the prefix task runs before
-        # any task in the rtas
 
+        # The super-rtas and all its sub-rtas are defined
+        # by this task label. This is the last task in the group
+        self.task_label = f"{self.basename_super}:rtas"
+
+        # all the rtas (super and sub) defined under this rtas
+        # will be used as dependency for group task with
+        # basename (without the ipv6)
+        self.rtas_taskseq_labels = [f"{self.basename_super}:rtas"]
+
+
+        # all first task in the rtas
+        # should have task dep to the prefix (aka setup) task
         self.task_dep = [f"{basename}_prefix"]
+
+    def set_new_subtask_seq(self, id_args= []):
+        """
+        subtask sequence:  a task sequence on the target node with additional qualifiers
+
+        """
+        self.basename = f"""{self.basename_super}:{ "_".join([str(_) for _ in id_args])}"""
+        self.task_local_step_pre = None
+        self.task_ship_files_iter = None
+        self.task_remote_step = None
+        self.task_remote_step_iter = None
+        self.task_fetch_files_iter = None
+        self.task_local_step_post = None
+        # these will be added as task_dep to the final group task
+        self.rtas_taskseq_labels.append(f"{self.basename}:rtas")
+        # all sub-rtas has dependency to the teardown task of
+        # the super task
+        self.task_dep = [f"{self.basename_super}:rtas"]
+        pass

@@ -43,6 +43,16 @@ fabric_conn_adming = Connection(host=ipv6,
                          config=fabric_config
                          )
 
+from dask.distributed import Client
+src_dir = os.path.dirname(os.path.realpath(__file__))
+client = Client(f'{ipv6}:8786')
+import remote_actions
+client.upload_file(f"{src_dir}/remote_actions.py")
+
+def do_remote_action(remote_file_path):
+    future = client.submit(remote_actions.write_file, remote_file_path)
+    print(future.result())
+    
 rtas = RemoteTaskActionSequence(ipv6)
 rtas.add_ssh_user("root", fabric_conn_root)
 rtas.add_ssh_user("adming", fabric_conn_adming)
@@ -60,7 +70,10 @@ def local_step_pre(task_label):
     Path(f"/tmp/{task_label}_2").write_text(f"{task_label}_2")
     pass
 
-def local_step_post(task_label, remote_file1, remote_file2, remote_file3):
+def local_step_post(task_label,
+                    remote_file1,
+                    remote_file2,
+                    remote_file3):
     Path(f"/tmp/result_{task_label}").write_text(Path(remote_file1).read_text() +  
         Path(remote_file2).read_text()  + 
         Path(remote_file3).read_text()
@@ -68,8 +81,9 @@ def local_step_post(task_label, remote_file1, remote_file2, remote_file3):
         
     pass
 
+
 @doit_taskify(all_rtas)
-def test_drive_rtas(rtas):
+def test_drive_rtas_remote_step_via_dask(rtas):
     
     rtas.set_task_local_step_pre(local_step_pre,
                                  "super",
@@ -93,15 +107,19 @@ def test_drive_rtas(rtas):
                                      ],
                                    "/tmp"
         )
-    rtas.set_task_remote_step("""cd /tmp/; touch remote_file1; echo "hello"> remote_file1; echo "hello"> remote_file2; echo "hello"> remote_file3;""",
-                              targets = ["/tmp/remote_file1",
-                                         "/tmp/remote_file2",
-                                         "/tmp/remote_file3",
-                                         
-                                         
-                                         ]
+    task_remote_step_append = rtas.set_task_remote_step_iter()
+    task_remote_step_append(do_remote_action,
+                            "remote_file1",
+                            "/tmp/remote_file1",
+                            targets = ["/tmp/remote_file1"]
+                            )
 
-        )
+    task_remote_step_append(do_remote_action,
+                            "remote_file2",
+                            "/tmp/remote_file2",
+                            targets = ["/tmp/remote_file2"]
+                            )
+    
     
     rtas.set_task_fetch_files_iter(["/tmp/remote_file1",
                                     "/tmp/remote_file2",
@@ -123,58 +141,58 @@ def test_drive_rtas(rtas):
 
     # ======================== create subtasks =======================
 
-    rtas.set_new_subtask_seq(id_args=["worker_id:0"])
-    task_label = "sub_workder_id:0"
-    rtas.set_task_local_step_pre(local_step_pre,
-                                 task_label,
-                                 targets = [
+    # rtas.set_new_subtask_seq(id_args=["worker_id:0"])
+    # task_label = "sub_workder_id:0"
+    # rtas.set_task_local_step_pre(local_step_pre,
+    #                              task_label,
+    #                              targets = [
 
-                                     Path(f"/tmp/{task_label}_0"),
-                                     Path(f"/tmp/{task_label}_1"),
-                                     Path(f"/tmp/{task_label}_2")
+    #                                  Path(f"/tmp/{task_label}_0"),
+    #                                  Path(f"/tmp/{task_label}_1"),
+    #                                  Path(f"/tmp/{task_label}_2")
 
-                                     ],
-                                 uptodate = [run_once]
+    #                                  ],
+    #                              uptodate = [run_once]
 
-                                 )
+    #                              )
     
-    rtas.set_task_ship_files_iter( [
+    # rtas.set_task_ship_files_iter( [
 
-                                     Path(f"/tmp/{task_label}_0"),
-                                     Path(f"/tmp/{task_label}_1"),
-                                     Path(f"/tmp/{task_label}_2")
+    #                                  Path(f"/tmp/{task_label}_0"),
+    #                                  Path(f"/tmp/{task_label}_1"),
+    #                                  Path(f"/tmp/{task_label}_2")
 
-                                     ],
-                                   "/tmp"
-        )
-    rtas.set_task_remote_step("""cd /tmp/; touch remote_file01; echo "hello"> remote_file01; echo "hello"> remote_file02; echo "hello"> remote_file03;""",
-                              targets = ["/tmp/remote_file01",
-                                         "/tmp/remote_file02",
-                                         "/tmp/remote_file03",
+    #                                  ],
+    #                                "/tmp"
+    #     )
+    # rtas.set_task_remote_step("""cd /tmp/; touch remote_file01; echo "hello"> remote_file01; echo "hello"> remote_file02; echo "hello"> remote_file03;""",
+    #                           targets = ["/tmp/remote_file01",
+    #                                      "/tmp/remote_file02",
+    #                                      "/tmp/remote_file03",
                                          
                                          
-                                         ]
+    #                                      ]
 
-        )
+    #     )
     
-    rtas.set_task_fetch_files_iter(["/tmp/remote_file01",
-                                    "/tmp/remote_file02",
-                                    "/tmp/remote_file03",
+    # rtas.set_task_fetch_files_iter(["/tmp/remote_file01",
+    #                                 "/tmp/remote_file02",
+    #                                 "/tmp/remote_file03",
                                     
-                                    ],
-                                   "/tmp")
+    #                                 ],
+    #                                "/tmp")
                                    
-    rtas.set_task_local_step_post(local_step_post,
-                                  task_label,
-                                  "/tmp/remote_file01",
-                                  "/tmp/remote_file02",
-                                  "/tmp/remote_file03",
+    # rtas.set_task_local_step_post(local_step_post,
+    #                               task_label,
+    #                               "/tmp/remote_file01",
+    #                               "/tmp/remote_file02",
+    #                               "/tmp/remote_file03",
                                     
-                                  targets = [f"/tmp/{task_label}"
+    #                               targets = [f"/tmp/{task_label}"
 
-                                      ]
-                                  )
-    yield from rtas
+    #                                   ]
+    #                               )
+    #yield from rtas
 
     pass
 
