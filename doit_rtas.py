@@ -108,47 +108,6 @@ def doit_taskify(all_rtas, **kwargs):
         return doit_task
     return wrapper
 
-    
-# def doit_taskify(rtas, **kwargs):
-#     #assert rtas is not None
-#     def wrapper(func):
-#         """
-#         convert a function to a rtas task sequence generator function.
-#         prefix and suffix task will be added. 
-#         """
-#         rtas_basename = func.__name__
-#         def hook_for_set_new_task(*arg, **kwargs):
-#             assert False
-            
-#         def doit_task():
-#             #prefix for rtas task sequence
-#             trec = {'basename': f"{rtas_basename}_prefix",
-#                     'actions': None,
-#                     'task_dep': kwargs.get('task_dep', [])
-                    
-#                     }
-#             yield trec
-#             rtas.set_new_task_seq(rtas_basename)
-#             #call user func to create rtas tasks
-#             func(rtas)
-#             # ========================== end =========================
-            
-#             # disable set_new_seq for now
-#             #rtas.set_new_task_seq = None
-#             yield from rtas
-
-#             # group task representing rtas
-#             trec = {'basename': rtas_basename,
-#                     'actions': None,
-#                     'task_dep': [rtas.task_label]
-#                     }
-        
-#             yield trec
-
-#         doit_task.create_doit_tasks = doit_task
-#         return doit_task
-#     return wrapper
-
 
 def remote_exec_cmd(self,  task_label, *args):
 
@@ -203,7 +162,6 @@ class RemoteTaskActionSequence:
         #self.task_label = f"{self.basename}:rtas"
         
         self.ipv6 = ipv6
-        
         self.task_local_step_pre = None
         self.task_ship_files_iter = None
         self.task_remote_step = None
@@ -219,38 +177,15 @@ class RemoteTaskActionSequence:
         self.task_dep = None
 
 
-        # a set of ssh users on remote target is maintained
-        # use set_ssh_user to invoke an action on remote target
-        # via choosen user
-
         self.ssh_users_fabric_conn = {}
-        
-        # connect_kwargs = {
-        #     "key_filename": f"{cluster_resources_datadir}/{adming_public_key_file}",
-        # }
-
-        # config = Config(overrides={
-        #     'connect_kwargs': connect_kwargs,
-        #     'run': {
-        #         'hide': True,
-        #         'warn': True,
-        #         'echo': True
-        #     },
-        # })
-
-
-        # self.user_adming_conn = Connection(host=self.ipv6,
-        #                                    user="adming",
-        #                                    config=config
-        #                                    )
-        # self.user_root_conn = Connection(host=self.ipv6,
-        #                                    user="root",
-        #                                    config=config
-        #                                    )
-        
-        # self.active_conn = self.user_adming_conn #self.user_root_conn
         self.active_conn = None
         
+        make_active = True
+        for user_name, fabric_conn in args:
+            self.add_ssh_user(user_name, fabric_conn, make_active=make_active)
+            make_active=False
+            
+
 
 
     def add_ssh_user(self, user_name, fabric_conn, make_active="False"):
@@ -264,14 +199,7 @@ class RemoteTaskActionSequence:
         self.active_conn = self.ssh_users_fabric_conn[user]
 
         
-    # def __del__(self):
-    #     """
-    #     cleanup resources
-    #     """
-    #     print("Admin connection closed.")
-    #     for user, conn in self.ssh_users_fabric_conn:
-    #         conn.close()
-    #     pass
+
     
     def set_task_local_step_pre(self,
                            step_func,
@@ -280,7 +208,7 @@ class RemoteTaskActionSequence:
                            ):
         """
         args  will be passed stepfunc as is.
-        **kwargs has task directives like targets etc. 
+        **kwargs has task like targets, file_dep, uptodate e
         """
         trec = {
             'basename': self.basename,
@@ -503,25 +431,13 @@ class RemoteTaskActionSequence:
                                         )
             remote_step_trecs.append(trec)
 
-            # not adding the shipped files as dependency
-            # done
-            
-
-
-            # #TODO:
-            # # make task_ship_files as task dep 
-            # if self.task_ship_files_iter:
-            #     trec['task_dep'].append(f"{self.basename}:ship_files"
-
-            #                             )
-            
             if self.task_dep:
                 trec['task_dep'].extend(self.task_dep)
                 self.task_dep = []
 
                 
         def finalize():
-            assert len(remote_step_trecs) > 1
+
             # put the task_dep on the first task
             if self.task_dep:
                 remote_step_trecs[0]['task_dep'] = [self.task_dep]
@@ -544,7 +460,7 @@ class RemoteTaskActionSequence:
         self.task_remote_step_iter = remote_step_trecs
         self.remote_step_iter_finalize = finalize
 
-        # TODO: yield the final task which will have
+
         # dependency of last task iter
 
         self.final_task = f"{self.basename}:remote_step"

@@ -9,9 +9,6 @@ import os
 import logging
 logger = logging.getLogger(__name__)
 
-
-
-
 def get_ref_name(trec):
     """
     """
@@ -25,9 +22,8 @@ def ship_file(fabric_conn,
               dest_dir
               ):
     try: 
-        logger.info(f"start ship file {file_to_ship}")
         fabric_conn.put(file_to_ship, dest_dir)
-        logger.info(f"end ship file {file_to_ship}")
+
     except Exception as e:
         logger.debug(f"FILE-ship-FAILURE: {file_to_ship} due to {e}")
         raise e
@@ -40,9 +36,7 @@ def fetch_file(fabric_conn,
               ):
     try:
         local_fp = str(Path(fetch_dir)/Path(file_to_fetch).name)
-        logger.info(f"start fetch file {file_to_fetch}")
         fabric_conn.get(file_to_fetch, local_fp)
-        logger.info(f"end fetch file {file_to_fetch}")
         
     except Exception as e:
         logger.debug(f"FILE-Fetch-FAILURE: {file_to_fetch} due to {e}")

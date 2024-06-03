@@ -1,6 +1,6 @@
 # RemoteOrchestratePy
 
-RemoteOrchestratePy is a Python-based solution for orchestrating IT workloads across a cluster of remote machines. It seamlessly integrates PyDoit and ClusterShell, offering straightforward APIs to efficiently manage tasks related to remote machine IT operations.
+RemoteOrchestratePy is a Python-based solution for orchestrating IT workloads across a cluster of remote machines. It seamlessly integrates PyDoit with Fabric and Dash, offering straightforward workflow to ease the process of writing automation script on  remote machine IT operations.
 
 ## Why PyDoit:
 
@@ -21,14 +21,6 @@ In general, PyDoit offers the following features and advantages:
 - **Error Handling:** doit provides error handling for tasks and stops execution in case of failure, preventing further tasks from running.
 
 - **Customization:** You can customize doit to fit your project's specific needs by defining your own tasks and actions.
-
-
-
-## Why ClusterShell
-
-ClusterShell plays a pivotal role in this orchestration solution, handling all the heavy lifting involved in shipping task instructions to remote machines, executing them, and gathering the results. It boasts seamless integration with Python and offers comprehensive Python APIs for managing all aspects related to remote execution.
-
-
 
 
 

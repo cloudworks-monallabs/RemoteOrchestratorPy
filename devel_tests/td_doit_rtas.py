@@ -43,9 +43,12 @@ fabric_conn_adming = Connection(host=ipv6,
                          config=fabric_config
                          )
 
-rtas = RemoteTaskActionSequence(ipv6)
-rtas.add_ssh_user("root", fabric_conn_root)
-rtas.add_ssh_user("adming", fabric_conn_adming)
+rtas = RemoteTaskActionSequence(ipv6, ("adming", fabric_conn_adming),
+
+                                ("root", fabric_conn_root)
+                                )
+# rtas.add_ssh_user("root", fabric_conn_root)
+# rtas.add_ssh_user("adming", fabric_conn_adming)
 rtas.set_active_user("adming")
 
 all_rtas = [rtas]
@@ -187,7 +190,7 @@ DOIT_CONFIG = {
     
     }
 
-# This chdir is essential -- doit switche to the  directory of the dodo file
+# This chdir is essential -- doit switches to the  directory of the dodo file
 os.chdir("/home/adming/DrivingRange/CloudWorks/dodo_testdb_v3")
 
 if __name__ == "__main__":
