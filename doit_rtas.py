@@ -100,7 +100,7 @@ def doit_taskify(all_rtas, **kwargs):
             # has task dep to all super and sup rtas teardown task 
             trec = {'basename': rtas_basename,
                     'actions': None,
-                    'task_dep': rtas.rtas_taskseq_labels
+                    'task_dep': all_rtas_tasks
                     }
 
             yield trec
