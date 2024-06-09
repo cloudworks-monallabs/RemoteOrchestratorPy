@@ -89,10 +89,11 @@ def doit_taskify(all_rtas, **kwargs):
             yield trec
 
 
-            
+            all_rtas_tasks = []
             for rtas in all_rtas:
                 rtas.set_super_task_seq(rtas_basename)
                 yield from func(rtas)
+                all_rtas_tasks.extend(rtas.rtas_taskseq_labels)
                 
 
             # the teardown group task:
@@ -678,6 +679,8 @@ class RemoteTaskActionSequence:
 
         """
         self.basename = f"""{self.basename_super}:{ "_".join([str(_) for _ in id_args])}"""
+        print ("WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", self.basename)
+        
         self.task_local_step_pre = None
         self.task_ship_files_iter = None
         self.task_remote_step = None
