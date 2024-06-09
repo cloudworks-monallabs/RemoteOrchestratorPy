@@ -679,6 +679,9 @@ class RemoteTaskActionSequence:
 
         """
         self.basename = f"""{self.basename_super}:{ "_".join([str(_) for _ in id_args])}"""
+        # non doit_taskify relies on task_label to accumalate tasks generated
+        # doit_taskify relies on rtas_taskseq_labels
+        self.task_label = f"{self.basename}:rtas"
         print ("WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", self.basename, " ", id_args)
         
         self.task_local_step_pre = None
