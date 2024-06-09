@@ -89,17 +89,17 @@ def doit_taskify(all_rtas, **kwargs):
             yield trec
 
 
-            
+            all_rtas_tasks = []
             for rtas in all_rtas:
                 rtas.set_super_task_seq(rtas_basename)
                 yield from func(rtas)
-                
+                all_rtas_tasks.extend(rtas.rtas_taskseq_labels)
 
             # the teardown group task:
             # has task dep to all super and sup rtas teardown task 
             trec = {'basename': rtas_basename,
                     'actions': None,
-                    'task_dep': rtas.rtas_taskseq_labels
+                    'task_dep': all_rtas_tasks
                     }
 
             yield trec
@@ -195,7 +195,8 @@ class RemoteTaskActionSequence:
         
     def set_active_user(self, user="adming"):
         assert user in self.ssh_users_fabric_conn
-        
+
+        print ("==================> setting ssh user to ", user)
         self.active_conn = self.ssh_users_fabric_conn[user]
 
         
