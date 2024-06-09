@@ -679,6 +679,7 @@ class RemoteTaskActionSequence:
 
         """
         self.basename = f"""{self.basename_super}:{ "_".join([str(_) for _ in id_args])}"""
+        print ("WWWWWWWWWWWWWWWWWWWWWWW = ", self.basename)
         self.task_local_step_pre = None
         self.task_ship_files_iter = None
         self.task_remote_step = None
