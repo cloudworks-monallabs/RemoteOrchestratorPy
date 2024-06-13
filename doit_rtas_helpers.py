@@ -49,17 +49,19 @@ def log_command_exec_status(cmdstr, result, task_label, ipv6):
     stdout = result.stdout.strip()
     stderr = result.stderr.strip()
     logger = logging.getLogger(__name__)
+    # False indicates the task generally failed
+    
     if not stderr:    
         logger.info(f"IP Address: {ipv6} || {task_label} || For command: {cmdstr}")
         logger.info(stdout)
         
-        return "Success"
+        return True
 
     else:
         logger.error(f"IP Address: {ipv6} || {task_label} || For command: {cmdstr}")
         logger.error(stderr)
 
-        return "Failed"
+        return False
             
 
  

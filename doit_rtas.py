@@ -123,9 +123,6 @@ def remote_exec_cmd(self,  task_label, *args):
                                          task_label,
                                          self.ipv6
                                 )
-        if status == "Failed":
-            break
-
     return status
 
 def check_remote_files_exists(fabric_conn, remote_targets):
