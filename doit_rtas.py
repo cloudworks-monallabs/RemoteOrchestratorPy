@@ -69,6 +69,7 @@ def make_task(func):
 #     doit_task.create_doit_tasks = doit_task
 
 #     return doit_task
+
 def doit_taskify(all_rtas, **kwargs):
     """
     all_rtas: list of RemoteTaskActionSequence. Each rtas represents a compte node on which to invoke action sequence
