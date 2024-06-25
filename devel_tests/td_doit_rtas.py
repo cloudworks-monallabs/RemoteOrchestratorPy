@@ -16,7 +16,7 @@ from pathlib import Path
 import os
 from doit.tools import run_once
 
-ipv6 = "45.76.4.30"
+ipv6 = "192.168.0.102"
 
 # === create rtas with fabric conn for 2 ssh users root and adming ===
 cluster_resources_datadir="/home/adming/cluster_resources"
@@ -34,21 +34,19 @@ fabric_config = Config(overrides={
 })
 
 fabric_conn_root = Connection(host=ipv6,
-                         user="root",
-                         config=fabric_config
+                              user="root",
+                              config=fabric_config
                          )
 
 fabric_conn_adming = Connection(host=ipv6,
-                         user="adming",
-                         config=fabric_config
+                                user="adming",
+                                config=fabric_config
                          )
 
 rtas = RemoteTaskActionSequence(ipv6, ("adming", fabric_conn_adming),
-
+                                
                                 ("root", fabric_conn_root)
                                 )
-# rtas.add_ssh_user("root", fabric_conn_root)
-# rtas.add_ssh_user("adming", fabric_conn_adming)
 rtas.set_active_user("adming")
 
 all_rtas = [rtas]
@@ -96,7 +94,11 @@ def test_drive_rtas(rtas):
                                      ],
                                    "/tmp"
         )
-    rtas.set_task_remote_step("""cd /tmp/; touch remote_file1; echo "hello"> remote_file1; echo "hello"> remote_file2; echo "hello"> remote_file3;""",
+
+    remote_task_append = rtas.set_task_remote_step_iter()
+    remote_task_append("""cd /tmp/; touch remote_file1; echo "hello"> remote_file1; echo "hello"> remote_file2; echo "hello"> remote_file3;""",
+                       "remote_work",
+                       
                               targets = ["/tmp/remote_file1",
                                          "/tmp/remote_file2",
                                          "/tmp/remote_file3",
@@ -150,7 +152,9 @@ def test_drive_rtas(rtas):
                                      ],
                                    "/tmp"
         )
-    rtas.set_task_remote_step("""cd /tmp/; touch remote_file01; echo "hello"> remote_file01; echo "hello"> remote_file02; echo "hello"> remote_file03;""",
+    remote_task_append = rtas.set_task_remote_step_iter()
+    remote_task_append("""cd /tmp/; touch remote_file01; echo "hello"> remote_file01; echo "hello"> remote_file02; echo "hello"> remote_file03;""",
+                       "remote_subtask", 
                               targets = ["/tmp/remote_file01",
                                          "/tmp/remote_file02",
                                          "/tmp/remote_file03",

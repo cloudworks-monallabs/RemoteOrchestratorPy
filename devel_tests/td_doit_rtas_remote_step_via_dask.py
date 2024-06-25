@@ -16,7 +16,7 @@ from pathlib import Path
 import os
 from doit.tools import run_once
 
-ipv6 = "45.76.4.30"
+ipv6 = "192.168.0.102"
 
 # === create rtas with fabric conn for 2 ssh users root and adming ===
 cluster_resources_datadir="/home/adming/cluster_resources"
@@ -139,65 +139,6 @@ def test_drive_rtas_remote_step_via_dask(rtas):
                                   )
     yield from rtas
 
-    # ======================== create subtasks =======================
-
-    # rtas.set_new_subtask_seq(id_args=["worker_id:0"])
-    # task_label = "sub_workder_id:0"
-    # rtas.set_task_local_step_pre(local_step_pre,
-    #                              task_label,
-    #                              targets = [
-
-    #                                  Path(f"/tmp/{task_label}_0"),
-    #                                  Path(f"/tmp/{task_label}_1"),
-    #                                  Path(f"/tmp/{task_label}_2")
-
-    #                                  ],
-    #                              uptodate = [run_once]
-
-    #                              )
-    
-    # rtas.set_task_ship_files_iter( [
-
-    #                                  Path(f"/tmp/{task_label}_0"),
-    #                                  Path(f"/tmp/{task_label}_1"),
-    #                                  Path(f"/tmp/{task_label}_2")
-
-    #                                  ],
-    #                                "/tmp"
-    #     )
-    # rtas.set_task_remote_step("""cd /tmp/; touch remote_file01; echo "hello"> remote_file01; echo "hello"> remote_file02; echo "hello"> remote_file03;""",
-    #                           targets = ["/tmp/remote_file01",
-    #                                      "/tmp/remote_file02",
-    #                                      "/tmp/remote_file03",
-                                         
-                                         
-    #                                      ]
-
-    #     )
-    
-    # rtas.set_task_fetch_files_iter(["/tmp/remote_file01",
-    #                                 "/tmp/remote_file02",
-    #                                 "/tmp/remote_file03",
-                                    
-    #                                 ],
-    #                                "/tmp")
-                                   
-    # rtas.set_task_local_step_post(local_step_post,
-    #                               task_label,
-    #                               "/tmp/remote_file01",
-    #                               "/tmp/remote_file02",
-    #                               "/tmp/remote_file03",
-                                    
-    #                               targets = [f"/tmp/{task_label}"
-
-    #                                   ]
-    #                               )
-    #yield from rtas
-
-    pass
-
-# for _ in test_drive_rtas():
-#     print(_)
 
 DOIT_CONFIG = {
     "verbosity": 2,
@@ -205,7 +146,7 @@ DOIT_CONFIG = {
     
     }
 
-# This chdir is essential -- doit switche to the  directory of the dodo file
+# This chdir is essential -- doit switch to the  directory of the dodo file
 os.chdir("/home/adming/DrivingRange/CloudWorks/dodo_testdb_v3")
 
 if __name__ == "__main__":

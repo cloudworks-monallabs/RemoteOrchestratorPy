@@ -311,68 +311,68 @@ class RemoteTaskActionSequence:
         self.task_ship_files_group = trec
         self.final_task = f"{self.basename}:ship_files"
 
-    def set_task_remote_step(self, *args, **kwargs):
-        """
-        args is a list of string
-        each a command to be run on remote machine
-        kwargs['targets'] impiles remote targets
+    # def set_task_remote_step(self, *args, **kwargs):
+    #     """
+    #     args is a list of string
+    #     each a command to be run on remote machine
+    #     kwargs['targets'] impiles remote targets
         
         
-        """
-        trec = {
-            'basename': self.basename,
-            'name': "remote_step",
-            'actions': [(remote_exec_cmd, [self,
-                                           f"{self.basename}:remote_step",
-                                           *args])],
-            'doc': f"{self.task_label}: remote-step",
-            }
+    #     """
+    #     trec = {
+    #         'basename': self.basename,
+    #         'name': "remote_step",
+    #         'actions': [(remote_exec_cmd, [self,
+    #                                        f"{self.basename}:remote_step",
+    #                                        *args])],
+    #         'doc': f"{self.task_label}: remote-step",
+    #         }
 
 
-        trec['uptodate'] = kwargs.get('uptodate', [])
-        trec['task_dep'] = kwargs.get('task_dep', [])
+    #     trec['uptodate'] = kwargs.get('uptodate', [])
+    #     trec['task_dep'] = kwargs.get('task_dep', [])
 
-        # file_dep is dependency on local file and not on the files on remote destination 
-        if 'local_file_dep' in kwargs:
-            trec['file_dep'] = kwargs.get('local_file_dep')
+    #     # file_dep is dependency on local file and not on the files on remote destination 
+    #     if 'local_file_dep' in kwargs:
+    #         trec['file_dep'] = kwargs.get('local_file_dep')
             
         
-        #target implies remote targets
-        if 'targets' in kwargs:
-            trec['uptodate'].append((check_remote_files_exists,
-                                     [self.active_conn, kwargs.get('targets')]
-                                     )
-                                    )
+    #     #target implies remote targets
+    #     if 'targets' in kwargs:
+    #         trec['uptodate'].append((check_remote_files_exists,
+    #                                  [self.active_conn, kwargs.get('targets')]
+    #                                  )
+    #                                 )
             
 
-        #file_dep implies remote file_dep
-        if 'file_dep' in kwargs:
-            trec['uptodate'].append(RemoteFilesDep(self.active_conn,
-                                                   kwargs.get('file_dep')
-                                                   )
-                                    )
+    #     #file_dep implies remote file_dep
+    #     if 'file_dep' in kwargs:
+    #         trec['uptodate'].append(RemoteFilesDep(self.active_conn,
+    #                                                kwargs.get('file_dep')
+    #                                                )
+    #                                 )
 
-        # add the shipped files as dependency for remote task
+    #     # add the shipped files as dependency for remote task
             
-        if self.task_ship_files_iter:
-            trec['uptodate'].append(RemoteFilesDep(self.active_conn,
-                                                   self.shipped_files)
-                                    )
+    #     if self.task_ship_files_iter:
+    #         trec['uptodate'].append(RemoteFilesDep(self.active_conn,
+    #                                                self.shipped_files)
+    #                                 )
 
-        # make task_ship_files as task dep 
-        if self.task_ship_files_iter:
-            trec['task_dep'].append(f"{self.basename}:ship_files"
+    #     # make task_ship_files as task dep 
+    #     if self.task_ship_files_iter:
+    #         trec['task_dep'].append(f"{self.basename}:ship_files"
 
-                )
+    #             )
             
-        self.task_remote_step = trec
-        if self.task_dep:
-            trec['task_dep'].extend(self.task_dep)
-            self.task_dep = []
+    #     self.task_remote_step = trec
+    #     if self.task_dep:
+    #         trec['task_dep'].extend(self.task_dep)
+    #         self.task_dep = []
             
-        self.final_task = f"{self.basename}:remote_step"
+    #     self.final_task = f"{self.basename}:remote_step"
 
-        pass
+    #     pass
 
 
     def set_task_remote_step_iter(self):
@@ -401,7 +401,7 @@ class RemoteTaskActionSequence:
                 trec = {
                     'basename': self.basename,
                     'name': f"remote_step:{label}",
-                    'actions': [(cmd, args)],
+                    'actions': [cmd],
                     'doc': f"{self.task_label}: remote step : {label}",
                     }
 
@@ -680,7 +680,6 @@ class RemoteTaskActionSequence:
         # non doit_taskify relies on task_label to accumalate tasks generated
         # doit_taskify relies on rtas_taskseq_labels
         self.task_label = f"{self.basename}:rtas"
-        print ("WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", self.basename, " ", id_args)
         
         self.task_local_step_pre = None
         self.task_ship_files_iter = None

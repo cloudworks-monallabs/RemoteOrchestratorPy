@@ -1,6 +1,142 @@
+Background and Overview:
+========================
 
-Key features:
--------------
+`Pydoit  <https://pydoit.org/>`_ is a Python-based build automation tool that offers a clean, Pythonic approach to defining tasks and their dependencies. Like other build tools, it analyzes dependencies to determine the correct execution order for the necessary tasks and runs them efficiently.
+
+Pydoit provides a range of standard and custom constructs for defining task dependencies, including ``file_dep``, ``task_dep``, ``targets``, ``run_once``, ``uptodate``, ``calc_dep``, and ``create_after``. These constructs offer a flexible and robust way to manage complex workflows. Here's an overview with examples:
+
+- **file_dep**: Specifies file dependencies for a task, ensuring tasks are executed only when their dependent files have changed.
+
+  Example:
+
+  .. code-block:: python
+
+      def task_compile():
+          return {
+              'file_dep': ['source.c'],
+              'targets': ['output.o'],
+              'actions': ['gcc -c source.c -o output.o']
+          }
+
+- **task_dep**: Defines dependencies between tasks, ensuring proper execution order.
+
+  Example:
+
+  .. code-block:: python
+
+      def task_build():
+          return {
+              'task_dep': ['compile'],
+              'actions': ['gcc output.o -o program']
+          }
+
+- **targets**: Identifies the output files produced by a task, helping pydoit determine if the task needs to be rerun.
+
+  Example:
+
+  .. code-block:: python
+
+      def task_convert():
+          return {
+              'file_dep': ['data.csv'],
+              'targets': ['data.json'],
+              'actions': ['csvtojson data.csv > data.json']
+          }
+
+- **uptodate** : Allows custom conditions to be defined for checking whether a task is up-to-date.
+
+  Example:
+
+  .. code-block:: python
+
+      def task_backup():
+          return {
+              'actions': ['backup_tool --run'],
+              'uptodate': [lambda: os.path.exists('backup_done')]
+          }
+
+	  
+  - `pydoit` provided callables :  These callables can be used with `uptodate` to define conditions for checking if a task needs to be re-executed:
+
+    - `run_once`: execute a task only once (used for tasks without dependencies)
+    - `result_dep`:  check if the result of another task has changed
+    - `timeout`: indicate that a task should “expire” after a certain time interval
+    - `config_changed`: check for changes in a “configuration” string or dictionary
+    - `check_timestamp_unchanged()`: check access, status change/create or modify timestamp of a given file/directory
+
+    
+- **calc_dep**:  Compute the task depdency as a separate task. Also see `delayed task execution <https://pydoit.org/task-creation.html#delayed-task-creation>`_
+
+  Example:
+
+  .. code-block:: python
+
+      def task_process():
+          return {
+              'calc_dep': ['dep_calculator'],
+              'actions': ['process_data.sh']
+          }
+
+      def task_dep_calculator():
+
+	      def do_action():
+
+		  return {'task_dep': ...}
+
+
+	  return { 'actions': [do_action],
+
+		   ...
+		   ...
+		 }
+
+
+- **create_after** : Task creation is deferred until a target task has completed.
+  An example scenario where this is useful: Suppose you are working on a pipeline where the first task generates a list of files, and subsequent tasks need to process those files. Since the list of files is unknown until the first task runs, you can use create_after to defer the creation of processing tasks until the file-generation task is completed.
+  
+  Example:
+
+  .. code-block:: python
+
+     import glob
+
+     from doit import create_after
+
+
+     @create_after(executed='early', target_regex='.*\.out')
+     def task_build():
+	 for inf in glob.glob('*.in'):
+	     yield {
+		 'name': inf,
+		 'actions': ['cp %(dependencies)s %(targets)s'],
+		 'file_dep': [inf],
+		 'targets': [inf[:-3] + '.out'],
+		 'clean': True,
+	     }
+
+     def task_early():
+	 """a task that create some files..."""
+	 inter_files = ('a.in', 'b.in', 'c.in')
+	 return {
+	     'actions': ['touch %(targets)s'],
+	     'targets': inter_files,
+	     'clean': True,
+	 }
+    
+
+    
+		  
+
+These constructs make pydoit a powerful tool for managing intricate task dependencies in an efficient and Pythonic way.
+
+RemoteOrchestratePy: Extending PyDoit for remote operations
+===========================================================
+
+RemoteOrchestratePy builds on Pydoit to enable build/make features for orchestrating IT commands over a cluster of remote machines. By integrating pydoit with Fabric and Dash, RemoteOrchestratePy simplifies the process of writing and managing automation scripts for remote machine operations. It extends Pydoit's capabilities to handle remote execution seamlessly, allowing users to define tasks that run across multiple machines with ease. This integration makes it possible to automate complex IT operations involving multiple remote hosts, ensuring efficient and reliable orchestration of tasks.
+
+
+Key Features
+~~~~~~~~~~~~
 
 Compared to other build tools like make, bazel, maven, etc., RemoteOrchestratePy stands out in following manner:
 
@@ -15,7 +151,7 @@ Compared to other build tools like make, bazel, maven, etc., RemoteOrchestratePy
 - **General Purpose**:
   
   - Not limited to IT workloads -- RemoteOrchestratePy is capable of handling any tasks that can expressed using Python or command line scripts.
-  - Suitable for both simple and complex workflows involving multiple remote machines.
+  - Suitable for both simple and complex build expression involving multiple remote machines.
 
 - **Fine Grained**:
   
@@ -36,14 +172,17 @@ Compared to other build tools like make, bazel, maven, etc., RemoteOrchestratePy
    
   - Requires no python file logistic handling
   - Use of Python codes, instead of bash command strings, makes it trivally easy to run complex workflows on remote directly from local
-  - Supports all PyDoit task dependencies even though task is running remotely.
+  - Supports  PyDoit file task dependencies even though task is running remotely.
      
     
-  
+
+
+
 	    
 Workflow for operating on remote machine
-----------------------------------------
-In RemoteOrchestratePy, a workflow that involves a remote machine is called RemoteTaskActionSequence or RTAS/rtas for short. A RTAS consists of five phases in following sequences:
+========================================
+
+In RemoteOrchestratePy, a workflow that involves a remote machine is called RemoteTaskActionSequence or RTAS/rtas for short. A RTAS consists of five phases in following sequence:
 
 - local step pre
 - ship files
@@ -53,203 +192,24 @@ In RemoteOrchestratePy, a workflow that involves a remote machine is called Remo
 
 An rtas should have  work (action) defined for at least one of the phases. 
 
-#. **Local Step Pre**:
-    - This phase involves initial preparations and operations performed locally before any interaction with the remote machine. Typical tasks might include generating necessary files, setting up configurations, or performing initial computations.
+#. **Local Step Pre**: This phase involves initial preparations and operations performed locally before any interaction with the remote machine. Typical tasks might include generating necessary files, setting up configurations, or performing initial computations.
 
-#. **Ship Files**:
-    - During this phase, files either generated or needed from the local environment or other workflow files  are transferred to the remote machine. This ensures that the remote environment has all the necessary data and resources to perform its tasks.
+#. **Ship Files**: During this phase, files either generated or needed from the local environment or other workflow files  are transferred to the remote machine. This ensures that the remote environment has all the necessary data and resources to perform its tasks.
 
-#. **Remote Steps**:
-    - This phase encompasses all the operations executed on the remote machine. Operations can be expressed as series of strings which are executed on shell via `fabric_conn.run` api. Alternatively, you can define a function that uses dask to run python script remotely.  The results of these operations are typically stored on the remote machine until they are fetched back.
+#. **Remote Steps**: This phase encompasses all the operations executed on the remote machine. Operations can be expressed as series of strings which are executed within shell of remote machine. Alternatively, you can define a function that uses dask to run python script remotely.  
 
-#. **Fetch Files**:
-    - In this phase, the outputs or results produced by the remote steps are retrieved from the remote machine back to the local environment. This ensures that the local environment has access to the processed data for further use or analysis.
+#. **Fetch Files**: In this phase, the outputs or results produced by the remote steps are retrieved from the remote machine back to the local environment. This ensures that the local environment has access to the processed data for further use or analysis.
 
-#. **Local Step Post**:
-    - The final phase involves any concluding tasks that need to be performed locally after retrieving files from the remote machine. This might include further processing of data, generating reports, or cleaning up temporary files used during the workflow.
+#. **Local Step Post**: The final phase involves any concluding tasks that need to be performed locally after retrieving files from the remote machine. This might include further processing of data, generating reports, or cleaning up temporary files used during the workflow.
 
 Each phase is designed to encapsulate a specific part of the workflow, providing a structured approach to managing tasks across local and remote environments. Note that in any given RTAS, one or more of these phases can be optional or missing, depending on the specific requirements of the workflow.
 
-.. note::
-   
-   If there are multiple RTAS or if within a single rtas there are multiple sub-rtas then we a setup (or prefix) and teardown (final) task is required as well to encapsulate the generated task sequence. 
-	    
+..
+  .. note::
 
-Background and Overview:
-------------------------
-
-Python pydoit allows one to  express tasks (or actions) and their dependencies in an easy-to-understand Pythonic way. Other then this, its capability is like any other build tool:  it infers which tasks need to be run based on their dependencies and executes them efficiently.
-
-Pydoit provides several standard  as well as custom constructs to define task dependencies such as `file_dep`, `task_dep`, `targets`, `run_once`, `uptodate`, `calc_dep`, `create_after` etc.
-
-These constructs offer a flexible and powerful way to manage complex workflows. For example:
-
-- `file_dep` specifies files that a task depends on, ensuring tasks are executed only when their dependencies have changed.
-- `task_dep` allows for specifying dependencies between tasks.
-- `targets` define the output files produced by a task, which helps pydoit determine if the task needs to be rerun.
-- The `run_once` construct ensures that a task is executed only once, regardless of how many times it is referenced.
-- The `uptodate` construct can be used to add custom conditions for determining whether a task is up-to-date.
-- `calc_dep` dynamically calculates additional dependencies for a task.
-- The `create_after` construct ensures that a task is created only after another specified task has been completed, which is useful for managing dynamic task generation.
-   
-
-An Example Pydoit workflow
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. code-block:: python
-
-   from doit.tools import run_once, create_folder
-   import os
-
-   def task_initial_setup():
-   return {
-        'actions': [(create_folder, ['output'])],
-        'targets': ['output'],
-        'uptodate': [run_once],
-   }
-
-   def task_preprocess():
-     return {
-        'actions': ['echo "Preprocessing data" > output/preprocess.txt'],
-        'file_dep': ['input.txt'],
-        'targets': ['output/preprocess.txt'],
-    }
-
-   def task_process():
-      return {
-        'actions': ['echo "Processing data" > output/process.txt'],
-        'file_dep': ['output/preprocess.txt'],
-        'targets': ['output/process.txt'],
-        'task_dep': ['preprocess'],
-      }
-
-   def task_finalize():
-      return {
-        'actions': ['echo "Finalizing process" > output/finalize.txt'],
-        'file_dep': ['output/process.txt'],
-        'targets': ['output/finalize.txt'],
-        'calc_dep': ['process'],
-       }
-
-   def task_summary():
-      return {
-        'actions': ['cat output/finalize.txt output/process.txt output/preprocess.txt > output/summary.txt'],
-        'file_dep': ['output/finalize.txt', 'output/process.txt', 'output/preprocess.txt'],
-        'targets': ['output/summary.txt'],
-        'create_after': ['finalize'],
-      }
-
-    def task_cleanup():
-       return {
-        'actions': [(os.remove, ['output/summary.txt']), (os.remove, ['output/finalize.txt']), (os.remove, ['output/process.txt']), (os.remove, ['output/preprocess.txt'])],
-        'task_dep': ['summary'],
-        'run_once': True,
-       }
-
-This example demonstrates:
-
-#. *task_initial_setup*: Uses run_once to create the output directory only once.
-   
-#. *task_preprocess*: Uses file_dep to depend on input.txt and produces output/preprocess.txt.
-   
-#. *task_process*: Uses task_dep to depend on task_preprocess and produces output/process.txt.
-   
-#. *task_finalize*: Uses calc_dep to dynamically depend on task_process and produces output/finalize.txt.
-   
-#. *task_summary*: Uses create_after to ensure it is created after task_finalize and combines files into output/summary.txt.
-   
-#. *task_cleanup*: Uses task_dep to depend on task_summary and run_once to clean up only once.
+     If there are multiple RTAS or if within a single rtas there are multiple sub-rtas then a setup (or prefix) and teardown (final) task is required as well to encapsulate the generated task sequence. 
 
 
-Extending PyDoit for remote operations
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-RemoteOrchestratePy builds on Pydoit to enable build/make features for orchestrating IT commands over a cluster of remote machines. By integrating pydoit with Fabric and Dash, RemoteOrchestratePy simplifies the process of writing and managing automation scripts for remote machine operations. It extends pydoit's capabilities to handle remote execution seamlessly, allowing users to define tasks that run across multiple machines with ease. This integration makes it possible to automate complex IT operations involving multiple remote hosts, ensuring efficient and reliable orchestration of tasks.
-
-
-Popular Build Tools and Key Differences with PyDoit
----------------------------------------------------
-
-Several popular build tools exist across different ecosystems, each with its own strengths and use cases. Here's a comparison of some widely used build tools and how they differ from PyDoit. 
-Note that we have highlighted only the tools seemed like syntax is easy to follow. Other popular build tools like Maven, CMake, Gradle are know to have dense, verbose syntax that is not recommended for general purpose use cases.
-
-
-#. **Make**:
-   
-    - **Use Case**: Predominantly used in C/C++ development.
-    - **Strengths**: Simple syntax, widely supported, excellent for small to medium-sized projects.
-    - **Key Differences**: Make uses a declarative approach with Makefiles, whereas PyDoit uses a more Pythonic and programmatic approach to define tasks.
-    - **Example**:
-
-      .. code-block:: make
-
-        output.txt: input.txt
-            cat input.txt > output.txt
-
-      **Command to run:**
-
-      .. code-block:: bash
-
-	 make
-	 
-
-
-#. **Ninja**:
-   
-    - **Use Case**: High-performance builds, often used in large projects.
-    - **Strengths**: Extremely fast, designed for incremental builds.
-    - **Key Differences**: Ninja focuses on speed and is typically used as a backend for build systems like CMake. PyDoit, on the other hand, is a task management tool that integrates directly with Python scripts.
-
- - **Example**:
-   
-   .. code-block:: 
-
-        rule copy
-            command = cp $in $out
-
-        build output.txt: copy input.txt
-
-   **Command to run:**
-
-      .. code-block:: bash
-
-        ninja
-   
-
-#. **Bazel**:
-    - **Use Case**: Large-scale projects, high-performance builds.
-    - **Strengths**: Scalable, supports multiple languages, built-in sandboxing.
-    - **Key Differences**: Bazel uses its own BUILD language and focuses on performance and reproducibility. PyDoit offers more straightforward task definitions using Python.
-
-- **Example**:
-
-      .. code-block:: python
-
-        genrule(
-            name = "copy_file",
-            srcs = ["input.txt"],
-            outs = ["output.txt"],
-            cmd = "cp $(SRCS) $(OUTS)",
-        )
-
-      **Command to run:**
-
-      .. code-block:: bash
-
-        bazel build //:copy_file
-
-
-      
-Usage/API
----------
-
-All functionalities of RemoteOrchestratorPy is accessed via `RemoteTaskActionSequence` and decorator `doit_taskify`.
-
-`doit_taskify`  is a helper decorator to eliminate
-some of boilerplate code. First, we show API usage
-without the decorator with boilerplate code and
-next we show the use of doit_taskify that makes
-the code cleaner and less verbose.
 
 Super and sub task sequence
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -261,7 +221,18 @@ A subtask sequence, on the other hand, is a more specific and detailed sequence 
 
 This hierarchical structure allows for modular and organized task management, making complex IT operations more manageable.
 
-See api `set_super_task_seq` and `set_new_subtask_seq` on setting up super and subtask sequence.
+      
+Usage/API
+=========
+
+All functionalities of RemoteOrchestratorPy is accessed via `RemoteTaskActionSequence` and decorator `doit_taskify`.
+
+`doit_taskify`  is a helper decorator to eliminate
+some of boilerplate code. First, we show API usage
+without the decorator with boilerplate code and
+next we show the use of doit_taskify that makes
+the code cleaner and less verbose.
+
 
 
 Installation
@@ -271,16 +242,36 @@ To install RemoteOrchestratePy clone the repo and include the code path in the P
 
 
 .. code-block:: bash
+   pip install doit patchwork dask[distributed]
 
    git clone git@github.com:cloudworks-monallabs/RemoteOrchestratorPy.git
 
-   
+Running
+~~~~~~~
+
+#. First fire dask worker on the target nodes
+
+   .. code-block::
+
+      python3 -m venv venv
+      . ./venv/bin/activate
+      pip install dask[distributed]
+      dask scheduler
+      dask worker 192.168.0.102:8786
+      
+#. Run pydoit+RemoteOrchestratorPy code
+
+   .. code-block::
+
+      python  ~/RemoteOrchestratorPy/devel_tests/td_doit_rtas.py
+      
+
 APIs for RemoteTaskActionSequence
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+=================================
 
 
 Constructor
-```````````
+~~~~~~~~~~~
 
 The class RemoteTaskActionSequence is initialized with
 constructor that takes ip address and list of tuple consisting of  ssh user and fabric conn.
@@ -341,7 +332,7 @@ An example showing initialization of RemoteTaskActionSequence with for a single 
 
 		
 set_active_user
-```````````````
+~~~~~~~~~~~~~~~
 
    
 Sets the active SSH user for the RemoteTaskActionSequence.
@@ -357,7 +348,7 @@ Sets the active SSH user for the RemoteTaskActionSequence.
 
 
 set_super_task_seq
-``````````````````
+~~~~~~~~~~~~~~~~~~
 
  Setup a new task sequence with label `basename` qualified with `id_args`.
 
@@ -367,7 +358,8 @@ set_super_task_seq
 
 
 set_new_subtask_seq
-```````````````````
+~~~~~~~~~~~~~~~~~~~
+
 Sets up a new subtask sequence on the target node with additional qualifiers.
 
 .. py:function:: set_new_subtask_seq(self, id_args= [])
@@ -377,7 +369,8 @@ Sets up a new subtask sequence on the target node with additional qualifiers.
    :type id_args: list
 		          
 set_task_local_step_pre
-```````````````````````
+~~~~~~~~~~~~~~~~~~~~~~~
+
     Sets the local step pre-function for a task in the RemoteTaskActionSequence.
     
 .. py:function:: set_task_local_step_pre(step_func, *args, **kwargs)
@@ -392,7 +385,7 @@ set_task_local_step_pre
 
 
 set_task_ship_files_iter
-````````````````````````
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 Generates tasks per given file to ship to remote destination. The local file is treated as file dependency
 and remote is treated as target for the task
@@ -410,7 +403,7 @@ and remote is treated as target for the task
 
 
 set_task_remote_step_iter
-`````````````````````````
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
  Returns a function `remote_task_append` used to append a new remote task to the sequence.
 
@@ -486,7 +479,7 @@ See, working with Dask section, on setting up Dask with RemoteOrchestratorPy.
 
 
 set_task_fetch_files_iter
-`````````````````````````
+~~~~~~~~~~~~~~~~~~~~~~~~~
 Creates tasks, one per given file to fetch from the remote machine to a local directory. 
 
 	
@@ -500,7 +493,7 @@ Creates tasks, one per given file to fetch from the remote machine to a local di
 
 		 
 set_task_local_step_post
-````````````````````````
+~~~~~~~~~~~~~~~~~~~~~~~~
 Sets the given function to be executed as a task as part of
 local step post phase.
 
@@ -517,7 +510,7 @@ local step post phase.
 
 		 
 Demo: A complete workflow
--------------------------
+=========================
 
 
 Initialize RTAS
@@ -627,46 +620,82 @@ The example code defines both super and sub rtas.
     yield trec
 
 Decorator
-----------
+=========
+
 RemoteOrchestratorPy provides  `doit_taskify` to elimate some
 of the repeatitive boilerplate and make the code look more clean. It derives the label from name of the function and appends setup and teardown tasks as required:
 
 Usage shown below
+
+.. _demo:
 
 Demo for doit_taskify
 ~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: python
 		
-  all_rtas = [rtas]
-  @doit_taskify(all_rtas)
-  def deploy_webserver_runtime(rtas):
-    rtas.set_task_local_step_pre(...)
-    rta.set_task_ship_files_iter(...)
-    remote_task_append = set.set_task_remote_step_iter()
+   from doit_rtas import (RemoteTaskActionSequence,
+                       doit_taskify,
+                       )
 
-    # add a series of remote steps each with its own qualifier
-    remote_task_append(...)
-    remote_task_append(...)
-    ...
-
-    rtas.set_task_fetch_files_iter(...)
-    rtas.set_task_local_step_post(...)
-
+   connect_kwargs = {
+       "key_filename": <path-to-ssh-public-key-file>,
+    }
     
-    # generate tasks  for super task sequence
-    yield from rtas
+   ip_addr = <an-ip-address>
+       connect_kwargs = {
+        "key_filename": f"{cluster_resources_datadir}/{adming_public_key_file}",
+    }
+    fabric_config = Config(overrides={
+        'connect_kwargs': connect_kwargs,
+        'run': {
+            'hide': True,
+            'warn': True,
+            'echo': True
+        },
+    })
 
-    # define sub rtas: e.g., rtas that configures individual websites
-    for <website> in hosted_websites:
-        rtas.set_new_subtask_seq(id_args = [id(<website>)]
-                                     )
-        # define work for subtask sequence
-        ...
-        ...
-        
-        # store the final task of this rtas 
-        yield from rtas
+    fabric_conn_root = Connection(host=ip_addr,
+                                  user="root",
+                                  config=fabric_config
+                                  )
+
+    fabric_conn_adming = Connection(host=ip_addr,
+                                    user="adming",
+                                    config=fabric_config
+                                    )
+				    
+    rtas = RemoteTaskActionSequence(ipv6)
+   
+    all_rtas = [rtas]
+    @doit_taskify(all_rtas)
+    def deploy_webserver_runtime(rtas):
+      rtas.set_task_local_step_pre(...)
+      rta.set_task_ship_files_iter(...)
+      remote_task_append = set.set_task_remote_step_iter()
+
+      # add a series of remote steps each with its own qualifier
+      remote_task_append(...)
+      remote_task_append(...)
+      ...
+
+      rtas.set_task_fetch_files_iter(...)
+      rtas.set_task_local_step_post(...)
+
+
+      # generate tasks  for super task sequence
+      yield from rtas
+
+      # define sub rtas: e.g., rtas that configures individual websites
+      for <website> in hosted_websites:
+	  rtas.set_new_subtask_seq(id_args = [id(<website>)]
+				       )
+	  # define work for subtask sequence
+	  ...
+	  ...
+
+	  # store the final task of this rtas 
+	  yield from rtas
 
 
   
