@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Key features: &mdash; RemoteOrchestorPy 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=01f34227"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            RemoteOrchestorPy
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">Key features:</a></li>
+<li><a class="reference internal" href="#workflow-for-operating-on-remote-machine">Workflow for operating on remote machine</a></li>
+<li><a class="reference internal" href="#background-and-overview">Background and Overview:</a><ul>
+<li><a class="reference internal" href="#an-example-pydoit-workflow">An Example Pydoit workflow</a></li>
+<li><a class="reference internal" href="#extending-pydoit-for-remote-operations">Extending PyDoit for remote operations</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#popular-build-tools-and-key-differences-with-pydoit">Popular Build Tools and Key Differences with PyDoit</a></li>
+<li><a class="reference internal" href="#usage-api">Usage/API</a><ul>
+<li><a class="reference internal" href="#super-and-sub-task-sequence">Super and sub task sequence</a></li>
+<li><a class="reference internal" href="#installation">Installation</a></li>
+<li><a class="reference internal" href="#apis-for-remotetaskactionsequence">APIs for RemoteTaskActionSequence</a><ul>
+<li><a class="reference internal" href="#constructor">Constructor</a></li>
+<li><a class="reference internal" href="#set-active-user">set_active_user</a></li>
+<li><a class="reference internal" href="#set-super-task-seq">set_super_task_seq</a></li>
+<li><a class="reference internal" href="#set-new-subtask-seq">set_new_subtask_seq</a></li>
+<li><a class="reference internal" href="#set-task-local-step-pre">set_task_local_step_pre</a></li>
+<li><a class="reference internal" href="#set-task-ship-files-iter">set_task_ship_files_iter</a></li>
+<li><a class="reference internal" href="#set-task-remote-step-iter">set_task_remote_step_iter</a><ul>
+<li><a class="reference internal" href="#remote-task-append">remote_task_append</a></li>
+<li><a class="reference internal" href="#using-dask-to-execute-remote-step">Using Dask to execute remote step</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#set-task-fetch-files-iter">set_task_fetch_files_iter</a></li>
+<li><a class="reference internal" href="#set-task-local-step-post">set_task_local_step_post</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#demo-a-complete-workflow">Demo: A complete workflow</a><ul>
+<li><a class="reference internal" href="#initialize-rtas">Initialize RTAS</a></li>
+<li><a class="reference internal" href="#define-a-doit-task-using-rtas">Define a doit task using RTAS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#decorator">Decorator</a><ul>
+<li><a class="reference internal" href="#demo-for-doit-taskify">Demo for doit_taskify</a></li>
+</ul>
+</li>
+</ul>
+</div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">RemoteOrchestorPy</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Key features:</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/IntroUsage.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="key-features">
+<h1>Key features:<a class="headerlink" href="#key-features" title="Link to this heading"></a></h1>
+<p>Compared to other build tools like make, bazel, maven, etc., RemoteOrchestratePy stands out in following manner:</p>
+<ul class="simple">
+<li><p><strong>Better Coding Ergonomics</strong>:</p>
+<ul>
+<li><p>Avoids the need for learning a new language for builds/automation.</p></li>
+<li><p>Leverages Python syntax and constructs.</p></li>
+<li><p>Minimal boilerplate.</p></li>
+<li><p>Express task dependencies cleanly and in straightforward manner</p></li>
+<li><p>Easy to read, maintain, modify, and extend.</p></li>
+</ul>
+</li>
+<li><p><strong>General Purpose</strong>:</p>
+<ul>
+<li><p>Not limited to IT workloads – RemoteOrchestratePy is capable of handling any tasks that can expressed using Python or command line scripts.</p></li>
+<li><p>Suitable for both simple and complex workflows involving multiple remote machines.</p></li>
+</ul>
+</li>
+<li><p><strong>Fine Grained</strong>:</p>
+<ul>
+<li><p>Allows precise control over each step in the workflow without unnecessary verbosity</p></li>
+</ul>
+</li>
+<li><p><strong>Extends to Remote Machines</strong>:</p>
+<ul>
+<li><p>Is able to  define tasks that depend on the completion of actions executed on remote machines.</p></li>
+<li><p>Ensures tasks are executed in the correct order based on remote and local dependencies.</p></li>
+</ul>
+</li>
+<li><p><strong>Super and Subtask sequence</strong></p>
+<ul>
+<li><p>Hierarchical task management with super and subtask sequences.</p></li>
+<li><p>Super task sequences manage broad, overarching services or functions.</p></li>
+<li><p>Subtask sequences manage specific details under a super task sequence.</p></li>
+</ul>
+</li>
+<li><p><strong>Supports Dask to remotely run python script</strong></p>
+<ul>
+<li><p>Requires no python file logistic handling</p></li>
+<li><p>Use of Python codes, instead of bash command strings, makes it trivally easy to run complex workflows on remote directly from local</p></li>
+<li><p>Supports all PyDoit task dependencies even though task is running remotely.</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="workflow-for-operating-on-remote-machine">
+<h1>Workflow for operating on remote machine<a class="headerlink" href="#workflow-for-operating-on-remote-machine" title="Link to this heading"></a></h1>
+<p>In RemoteOrchestratePy, a workflow that involves a remote machine is called RemoteTaskActionSequence or RTAS/rtas for short. A RTAS consists of five phases in following sequences:</p>
+<ul class="simple">
+<li><p>local step pre</p></li>
+<li><p>ship files</p></li>
+<li><p>remote steps</p></li>
+<li><p>fetch files</p></li>
+<li><p>local step post</p></li>
+</ul>
+<p>An rtas should have  work (action) defined for at least one of the phases.</p>
+<ol class="arabic simple">
+<li><dl class="simple">
+<dt><strong>Local Step Pre</strong>:</dt><dd><ul class="simple">
+<li><p>This phase involves initial preparations and operations performed locally before any interaction with the remote machine. Typical tasks might include generating necessary files, setting up configurations, or performing initial computations.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>Ship Files</strong>:</dt><dd><ul class="simple">
+<li><p>During this phase, files either generated or needed from the local environment or other workflow files  are transferred to the remote machine. This ensures that the remote environment has all the necessary data and resources to perform its tasks.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>Remote Steps</strong>:</dt><dd><ul class="simple">
+<li><p>This phase encompasses all the operations executed on the remote machine. Operations can be expressed as series of strings which are executed on shell via <cite>fabric_conn.run</cite> api. Alternatively, you can define a function that uses dask to run python script remotely.  The results of these operations are typically stored on the remote machine until they are fetched back.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>Fetch Files</strong>:</dt><dd><ul class="simple">
+<li><p>In this phase, the outputs or results produced by the remote steps are retrieved from the remote machine back to the local environment. This ensures that the local environment has access to the processed data for further use or analysis.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>Local Step Post</strong>:</dt><dd><ul class="simple">
+<li><p>The final phase involves any concluding tasks that need to be performed locally after retrieving files from the remote machine. This might include further processing of data, generating reports, or cleaning up temporary files used during the workflow.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ol>
+<p>Each phase is designed to encapsulate a specific part of the workflow, providing a structured approach to managing tasks across local and remote environments. Note that in any given RTAS, one or more of these phases can be optional or missing, depending on the specific requirements of the workflow.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If there are multiple RTAS or if within a single rtas there are multiple sub-rtas then we a setup (or prefix) and teardown (final) task is required as well to encapsulate the generated task sequence.</p>
+</div>
+</section>
+<section id="background-and-overview">
+<h1>Background and Overview:<a class="headerlink" href="#background-and-overview" title="Link to this heading"></a></h1>
+<p>Python pydoit allows one to  express tasks (or actions) and their dependencies in an easy-to-understand Pythonic way. Other then this, its capability is like any other build tool:  it infers which tasks need to be run based on their dependencies and executes them efficiently.</p>
+<p>Pydoit provides several standard  as well as custom constructs to define task dependencies such as <cite>file_dep</cite>, <cite>task_dep</cite>, <cite>targets</cite>, <cite>run_once</cite>, <cite>uptodate</cite>, <cite>calc_dep</cite>, <cite>create_after</cite> etc.</p>
+<p>These constructs offer a flexible and powerful way to manage complex workflows. For example:</p>
+<ul class="simple">
+<li><p><cite>file_dep</cite> specifies files that a task depends on, ensuring tasks are executed only when their dependencies have changed.</p></li>
+<li><p><cite>task_dep</cite> allows for specifying dependencies between tasks.</p></li>
+<li><p><cite>targets</cite> define the output files produced by a task, which helps pydoit determine if the task needs to be rerun.</p></li>
+<li><p>The <cite>run_once</cite> construct ensures that a task is executed only once, regardless of how many times it is referenced.</p></li>
+<li><p>The <cite>uptodate</cite> construct can be used to add custom conditions for determining whether a task is up-to-date.</p></li>
+<li><p><cite>calc_dep</cite> dynamically calculates additional dependencies for a task.</p></li>
+<li><p>The <cite>create_after</cite> construct ensures that a task is created only after another specified task has been completed, which is useful for managing dynamic task generation.</p></li>
+</ul>
+<section id="an-example-pydoit-workflow">
+<h2>An Example Pydoit workflow<a class="headerlink" href="#an-example-pydoit-workflow" title="Link to this heading"></a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">doit.tools</span> <span class="kn">import</span> <span class="n">run_once</span><span class="p">,</span> <span class="n">create_folder</span>
+<span class="kn">import</span> <span class="nn">os</span>
+
+<span class="k">def</span> <span class="nf">task_initial_setup</span><span class="p">():</span>
+<span class="k">return</span> <span class="p">{</span>
+     <span class="s1">&#39;actions&#39;</span><span class="p">:</span> <span class="p">[(</span><span class="n">create_folder</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;output&#39;</span><span class="p">])],</span>
+     <span class="s1">&#39;targets&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;output&#39;</span><span class="p">],</span>
+     <span class="s1">&#39;uptodate&#39;</span><span class="p">:</span> <span class="p">[</span><span class="n">run_once</span><span class="p">],</span>
+<span class="p">}</span>
+
+<span class="k">def</span> <span class="nf">task_preprocess</span><span class="p">():</span>
+  <span class="k">return</span> <span class="p">{</span>
+     <span class="s1">&#39;actions&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;echo &quot;Preprocessing data&quot; &gt; output/preprocess.txt&#39;</span><span class="p">],</span>
+     <span class="s1">&#39;file_dep&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;input.txt&#39;</span><span class="p">],</span>
+     <span class="s1">&#39;targets&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;output/preprocess.txt&#39;</span><span class="p">],</span>
+ <span class="p">}</span>
+
+<span class="k">def</span> <span class="nf">task_process</span><span class="p">():</span>
+   <span class="k">return</span> <span class="p">{</span>
+     <span class="s1">&#39;actions&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;echo &quot;Processing data&quot; &gt; output/process.txt&#39;</span><span class="p">],</span>
+     <span class="s1">&#39;file_dep&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;output/preprocess.txt&#39;</span><span class="p">],</span>
+     <span class="s1">&#39;targets&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;output/process.txt&#39;</span><span class="p">],</span>
+     <span class="s1">&#39;task_dep&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;preprocess&#39;</span><span class="p">],</span>
+   <span class="p">}</span>
+
+<span class="k">def</span> <span class="nf">task_finalize</span><span class="p">():</span>
+   <span class="k">return</span> <span class="p">{</span>
+     <span class="s1">&#39;actions&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;echo &quot;Finalizing process&quot; &gt; output/finalize.txt&#39;</span><span class="p">],</span>
+     <span class="s1">&#39;file_dep&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;output/process.txt&#39;</span><span class="p">],</span>
+     <span class="s1">&#39;targets&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;output/finalize.txt&#39;</span><span class="p">],</span>
+     <span class="s1">&#39;calc_dep&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;process&#39;</span><span class="p">],</span>
+    <span class="p">}</span>
+
+<span class="k">def</span> <span class="nf">task_summary</span><span class="p">():</span>
+   <span class="k">return</span> <span class="p">{</span>
+     <span class="s1">&#39;actions&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;cat output/finalize.txt output/process.txt output/preprocess.txt &gt; output/summary.txt&#39;</span><span class="p">],</span>
+     <span class="s1">&#39;file_dep&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;output/finalize.txt&#39;</span><span class="p">,</span> <span class="s1">&#39;output/process.txt&#39;</span><span class="p">,</span> <span class="s1">&#39;output/preprocess.txt&#39;</span><span class="p">],</span>
+     <span class="s1">&#39;targets&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;output/summary.txt&#39;</span><span class="p">],</span>
+     <span class="s1">&#39;create_after&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;finalize&#39;</span><span class="p">],</span>
+   <span class="p">}</span>
+
+ <span class="k">def</span> <span class="nf">task_cleanup</span><span class="p">():</span>
+    <span class="k">return</span> <span class="p">{</span>
+     <span class="s1">&#39;actions&#39;</span><span class="p">:</span> <span class="p">[(</span><span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;output/summary.txt&#39;</span><span class="p">]),</span> <span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;output/finalize.txt&#39;</span><span class="p">]),</span> <span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;output/process.txt&#39;</span><span class="p">]),</span> <span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;output/preprocess.txt&#39;</span><span class="p">])],</span>
+     <span class="s1">&#39;task_dep&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;summary&#39;</span><span class="p">],</span>
+     <span class="s1">&#39;run_once&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="p">}</span>
+</pre></div>
+</div>
+<p>This example demonstrates:</p>
+<ol class="arabic simple">
+<li><p><em>task_initial_setup</em>: Uses run_once to create the output directory only once.</p></li>
+<li><p><em>task_preprocess</em>: Uses file_dep to depend on input.txt and produces output/preprocess.txt.</p></li>
+<li><p><em>task_process</em>: Uses task_dep to depend on task_preprocess and produces output/process.txt.</p></li>
+<li><p><em>task_finalize</em>: Uses calc_dep to dynamically depend on task_process and produces output/finalize.txt.</p></li>
+<li><p><em>task_summary</em>: Uses create_after to ensure it is created after task_finalize and combines files into output/summary.txt.</p></li>
+<li><p><em>task_cleanup</em>: Uses task_dep to depend on task_summary and run_once to clean up only once.</p></li>
+</ol>
+</section>
+<section id="extending-pydoit-for-remote-operations">
+<h2>Extending PyDoit for remote operations<a class="headerlink" href="#extending-pydoit-for-remote-operations" title="Link to this heading"></a></h2>
+<p>RemoteOrchestratePy builds on Pydoit to enable build/make features for orchestrating IT commands over a cluster of remote machines. By integrating pydoit with Fabric and Dash, RemoteOrchestratePy simplifies the process of writing and managing automation scripts for remote machine operations. It extends pydoit’s capabilities to handle remote execution seamlessly, allowing users to define tasks that run across multiple machines with ease. This integration makes it possible to automate complex IT operations involving multiple remote hosts, ensuring efficient and reliable orchestration of tasks.</p>
+</section>
+</section>
+<section id="popular-build-tools-and-key-differences-with-pydoit">
+<h1>Popular Build Tools and Key Differences with PyDoit<a class="headerlink" href="#popular-build-tools-and-key-differences-with-pydoit" title="Link to this heading"></a></h1>
+<p>Several popular build tools exist across different ecosystems, each with its own strengths and use cases. Here’s a comparison of some widely used build tools and how they differ from PyDoit.
+Note that we have highlighted only the tools seemed like syntax is easy to follow. Other popular build tools like Maven, CMake, Gradle are know to have dense, verbose syntax that is not recommended for general purpose use cases.</p>
+<ol class="arabic">
+<li><p><strong>Make</strong>:</p>
+<blockquote>
+<div><ul>
+<li><p><strong>Use Case</strong>: Predominantly used in C/C++ development.</p></li>
+<li><p><strong>Strengths</strong>: Simple syntax, widely supported, excellent for small to medium-sized projects.</p></li>
+<li><p><strong>Key Differences</strong>: Make uses a declarative approach with Makefiles, whereas PyDoit uses a more Pythonic and programmatic approach to define tasks.</p></li>
+<li><p><strong>Example</strong>:</p>
+<div class="highlight-make notranslate"><div class="highlight"><pre><span></span><span class="nf">output.txt</span><span class="o">:</span><span class="w"> </span><span class="n">input</span>.<span class="n">txt</span>
+<span class="w">    </span>cat<span class="w"> </span>input.txt<span class="w"> </span>&gt;<span class="w"> </span>output.txt
+</pre></div>
+</div>
+<p><strong>Command to run:</strong></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>make
+</pre></div>
+</div>
+</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p><strong>Ninja</strong>:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><strong>Use Case</strong>: High-performance builds, often used in large projects.</p></li>
+<li><p><strong>Strengths</strong>: Extremely fast, designed for incremental builds.</p></li>
+<li><p><strong>Key Differences</strong>: Ninja focuses on speed and is typically used as a backend for build systems like CMake. PyDoit, on the other hand, is a task management tool that integrates directly with Python scripts.</p></li>
+</ul>
+</div></blockquote>
+</li>
+</ol>
+<blockquote>
+<div><ul>
+<li><p><strong>Example</strong>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>rule copy
+    command = cp $in $out
+
+build output.txt: copy input.txt
+</pre></div>
+</div>
+<p><strong>Command to run:</strong></p>
+<blockquote>
+<div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>ninja
+</pre></div>
+</div>
+</div></blockquote>
+</li>
+</ul>
+</div></blockquote>
+<ol class="arabic simple">
+<li><dl class="simple">
+<dt><strong>Bazel</strong>:</dt><dd><ul class="simple">
+<li><p><strong>Use Case</strong>: Large-scale projects, high-performance builds.</p></li>
+<li><p><strong>Strengths</strong>: Scalable, supports multiple languages, built-in sandboxing.</p></li>
+<li><p><strong>Key Differences</strong>: Bazel uses its own BUILD language and focuses on performance and reproducibility. PyDoit offers more straightforward task definitions using Python.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ol>
+<ul>
+<li><p><strong>Example</strong>:</p>
+<blockquote>
+<div><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">genrule</span><span class="p">(</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;copy_file&quot;</span><span class="p">,</span>
+    <span class="n">srcs</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;input.txt&quot;</span><span class="p">],</span>
+    <span class="n">outs</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;output.txt&quot;</span><span class="p">],</span>
+    <span class="n">cmd</span> <span class="o">=</span> <span class="s2">&quot;cp $(SRCS) $(OUTS)&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Command to run:</strong></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>bazel<span class="w"> </span>build<span class="w"> </span>//:copy_file
+</pre></div>
+</div>
+</div></blockquote>
+</li>
+</ul>
+</section>
+<section id="usage-api">
+<h1>Usage/API<a class="headerlink" href="#usage-api" title="Link to this heading"></a></h1>
+<p>All functionalities of RemoteOrchestratorPy is accessed via <cite>RemoteTaskActionSequence</cite> and decorator <cite>doit_taskify</cite>.</p>
+<p><cite>doit_taskify</cite>  is a helper decorator to eliminate
+some of boilerplate code. First, we show API usage
+without the decorator with boilerplate code and
+next we show the use of doit_taskify that makes
+the code cleaner and less verbose.</p>
+<section id="super-and-sub-task-sequence">
+<h2>Super and sub task sequence<a class="headerlink" href="#super-and-sub-task-sequence" title="Link to this heading"></a></h2>
+<p>RTAS supports notion of super and sub task sequence.</p>
+<p>A super task sequence is a higher-level task that involves setting up a broad, overarching service or function. For example, setting up a web server runtime environment would be a super task sequence. This task sequence includes installing the necessary software, setting up runtime configurations, and ensuring that the service is up and running.</p>
+<p>A subtask sequence, on the other hand, is a more specific and detailed sequence of tasks that falls under the umbrella of the super task sequence. For example, configuring individual websites being served by the web server would be subtask sequences. Each subtask sequence might include setting up the site configuration files, setting permissions, and deploying content specific to each website.</p>
+<p>This hierarchical structure allows for modular and organized task management, making complex IT operations more manageable.</p>
+<p>See api <cite>set_super_task_seq</cite> and <cite>set_new_subtask_seq</cite> on setting up super and subtask sequence.</p>
+</section>
+<section id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Link to this heading"></a></h2>
+<p>To install RemoteOrchestratePy clone the repo and include the code path in the PYTHONPATH enviornment variable.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>git@github.com:cloudworks-monallabs/RemoteOrchestratorPy.git
+</pre></div>
+</div>
+</section>
+<section id="apis-for-remotetaskactionsequence">
+<h2>APIs for RemoteTaskActionSequence<a class="headerlink" href="#apis-for-remotetaskactionsequence" title="Link to this heading"></a></h2>
+<section id="constructor">
+<h3>Constructor<a class="headerlink" href="#constructor" title="Link to this heading"></a></h3>
+<p>The class RemoteTaskActionSequence is initialized with
+constructor that takes ip address and list of tuple consisting of  ssh user and fabric conn.</p>
+<dl class="py class">
+<dt class="sig sig-object py">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">RemoteTaskActionSequence</span></span></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ipv6</strong> (<em>str</em>) – The IP address of the remote machine.</p></li>
+<li><p><strong>args</strong> (<em>tuple</em>) – Variable number of positional arguments. Each args is a tuple of SSH username and corresponding Fabric connection.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Noindex<span class="colon">:</span></dt>
+<dd class="field-even"><p></p></dd>
+</dl>
+</dd></dl>
+
+<p>An example showing initialization of RemoteTaskActionSequence with for a single remote machine with two ssh users: <cite>root</cite> and <cite>adming</cite>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">doit_rtas</span> <span class="kn">import</span> <span class="n">RemoteTaskActionSequence</span><span class="p">,</span> <span class="n">doit_taskify</span>
+
+<span class="kn">from</span> <span class="nn">fabric</span> <span class="kn">import</span> <span class="n">Connection</span><span class="p">,</span> <span class="n">Config</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+
+<span class="kn">from</span> <span class="nn">doit.tools</span> <span class="kn">import</span> <span class="n">run_once</span>
+
+<span class="n">connect_kwargs</span> <span class="o">=</span> <span class="p">{</span>
+<span class="s2">&quot;key_filename&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">path</span><span class="o">-</span><span class="n">to</span><span class="o">-</span><span class="n">ssh</span><span class="o">-</span><span class="n">public</span><span class="o">-</span><span class="n">key</span><span class="o">-</span><span class="n">file</span><span class="o">&gt;</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="n">fabric_config</span> <span class="o">=</span> <span class="n">Config</span><span class="p">(</span><span class="n">overrides</span><span class="o">=</span><span class="p">{</span>
+<span class="s1">&#39;connect_kwargs&#39;</span><span class="p">:</span> <span class="n">connect_kwargs</span><span class="p">,</span>
+<span class="s1">&#39;run&#39;</span><span class="p">:</span> <span class="p">{</span>
+     <span class="s1">&#39;hide&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+     <span class="s1">&#39;warn&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+     <span class="s1">&#39;echo&#39;</span><span class="p">:</span> <span class="kc">True</span>
+ <span class="p">},</span>
+ <span class="p">})</span>
+
+
+<span class="n">fabric_conn_root</span> <span class="o">=</span> <span class="n">Connection</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="n">ipv6</span><span class="p">,</span>
+                      <span class="n">user</span><span class="o">=</span><span class="s2">&quot;root&quot;</span><span class="p">,</span>
+                      <span class="n">config</span><span class="o">=</span><span class="n">fabric_config</span>
+                      <span class="p">)</span>
+
+<span class="n">fabric_conn_adming</span> <span class="o">=</span> <span class="n">Connection</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="n">ipv6</span><span class="p">,</span>
+                      <span class="n">user</span><span class="o">=</span><span class="s2">&quot;adming&quot;</span><span class="p">,</span>
+                      <span class="n">config</span><span class="o">=</span><span class="n">fabric_config</span>
+                      <span class="p">)</span>
+
+<span class="n">rtas</span> <span class="o">=</span> <span class="n">RemoteTaskActionSequence</span><span class="p">(</span><span class="n">ipv6</span><span class="p">,</span>
+                               <span class="p">(</span><span class="s1">&#39;root&#39;</span><span class="p">,</span> <span class="n">fabric_conn_root</span><span class="p">),</span>
+                               <span class="p">(</span><span class="s1">&#39;adming&#39;</span><span class="p">,</span> <span class="n">fabric_conn_adming</span><span class="p">)</span>
+
+             <span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="set-active-user">
+<h3>set_active_user<a class="headerlink" href="#set-active-user" title="Link to this heading"></a></h3>
+<p>Sets the active SSH user for the RemoteTaskActionSequence.</p>
+<blockquote>
+<div><dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">set_active_user</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">user</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'admin'</span></span></em><span class="sig-paren">)</span></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>user</strong> (<em>str</em>) – The SSH username to set as active. Defaults to “adming”.</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>AssertionError</strong> – If the provided user is not found in the SSH users and Fabric connections.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div></blockquote>
+</section>
+<section id="set-super-task-seq">
+<h3>set_super_task_seq<a class="headerlink" href="#set-super-task-seq" title="Link to this heading"></a></h3>
+<blockquote>
+<div><p>Setup a new task sequence with label <cite>basename</cite> qualified with <cite>id_args</cite>.</p>
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">set_super_task_seq</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">basename</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id_args</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+</div></blockquote>
+</section>
+<section id="set-new-subtask-seq">
+<h3>set_new_subtask_seq<a class="headerlink" href="#set-new-subtask-seq" title="Link to this heading"></a></h3>
+<p>Sets up a new subtask sequence on the target node with additional qualifiers.</p>
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">set_new_subtask_seq</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id_args</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em><span class="sig-paren">)</span></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>id_args</strong> (<em>list</em>) – A list of identifiers for the subtask sequence.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="set-task-local-step-pre">
+<h3>set_task_local_step_pre<a class="headerlink" href="#set-task-local-step-pre" title="Link to this heading"></a></h3>
+<blockquote>
+<div><p>Sets the local step pre-function for a task in the RemoteTaskActionSequence.</p>
+</div></blockquote>
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">set_task_local_step_pre</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">step_func</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>step_func</strong> (<em>callable</em>) – The function to be executed as the local step pre-function.</p></li>
+<li><p><strong>args</strong> (<em>tuple</em>) – Positional arguments to be passed to the <cite>step_func</cite>.</p></li>
+<li><p><strong>kwargs</strong> (<em>dict</em>) – Task dependency attributes such as <cite>targets</cite>, <cite>file_dep</cite>, <cite>uptodate</cite>, <cite>task_dep</cite></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="set-task-ship-files-iter">
+<h3>set_task_ship_files_iter<a class="headerlink" href="#set-task-ship-files-iter" title="Link to this heading"></a></h3>
+<p>Generates tasks per given file to ship to remote destination. The local file is treated as file dependency
+and remote is treated as target for the task</p>
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">set_task_ship_files_iter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">files_to_ship</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dest_dir</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>files_to_ship</strong> (<em>list</em><em> of </em><em>str</em>) – A list of file paths to be shipped.</p></li>
+<li><p><strong>dest_dir</strong> (<em>str</em>) – The destination directory on the remote machine where the files will be shipped.</p></li>
+<li><p><strong>kwargs</strong> (<em>dict</em>) – Task dependency attributes such as <cite>targets</cite>, <cite>file_dep</cite>, <cite>uptodate</cite>, <cite>task_dep</cite></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="set-task-remote-step-iter">
+<h3>set_task_remote_step_iter<a class="headerlink" href="#set-task-remote-step-iter" title="Link to this heading"></a></h3>
+<blockquote>
+<div><p>Returns a function <cite>remote_task_append</cite> used to append a new remote task to the sequence.</p>
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">set_task_remote_step_iter</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A function <cite>remote_task_append</cite> to append a new remote task to the sequence.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>function</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div></blockquote>
+<section id="remote-task-append">
+<h4>remote_task_append<a class="headerlink" href="#remote-task-append" title="Link to this heading"></a></h4>
+<p>The <cite>remote_task_append</cite> function is used to add a new task to the sequence of remote tasks.
+It takes a command (<cite>cmd</cite>), a label (<cite>label</cite>), and additional arguments and keyword arguments.</p>
+<ul class="simple">
+<li><p>If <cite>cmd</cite> is a string, it will be executed via Fabric’s <cite>run</cite> function on the remote machine.</p></li>
+<li><p>If <cite>cmd</cite> is a function, it is assumed to use Dask to run Python code remotely.</p></li>
+</ul>
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">remote_task_append</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cmd</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cmd</strong> (<em>str</em><em> or </em><em>function</em>) – The command to be executed as the remote task. If a string, it will be executed via Fabric’s <cite>run</cite> function. If a function, it is assumed to use Dask to run Python code remotely.</p></li>
+<li><p><strong>label</strong> (<em>str</em>) – A label for the task.</p></li>
+<li><p><strong>args</strong> – arguments if cmd is function</p></li>
+<li><p><strong>kwargs</strong> (<em>dict</em>) – task dependency arguments like <cite>file_dep</cite>, <cite>targets</cite>, etc</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="using-dask-to-execute-remote-step">
+<h4>Using Dask to execute remote step<a class="headerlink" href="#using-dask-to-execute-remote-step" title="Link to this heading"></a></h4>
+<p>The code snippet show how to use dask to
+execute python code on remote machine.
+Assume the file <cite>remote_actions.py</cite> has code as follows:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+
+<span class="k">def</span> <span class="nf">write_file</span><span class="p">(</span><span class="n">fn</span><span class="p">):</span>
+    <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;/tmp/dask_execution.txt&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="s2">&quot;executed via dask worker&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">fn</span><span class="si">}</span><span class="s2">42&quot;</span>
+</pre></div>
+</div>
+<p>Create function <cite>do_remote_action</cite>: as follows:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">remote_actions</span>
+<span class="k">def</span> <span class="nf">do_remote_action</span><span class="p">(</span><span class="n">remote_file_path</span><span class="p">):</span>
+  <span class="n">future</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="n">remote_actions</span><span class="o">.</span><span class="n">write_file</span><span class="p">,</span> <span class="n">remote_file_path</span><span class="p">)</span>
+  <span class="nb">print</span><span class="p">(</span><span class="n">future</span><span class="o">.</span><span class="n">result</span><span class="p">())</span>
+</pre></div>
+</div>
+<p>Now, to turn this into a pydoit task:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">task_remote_step_append</span><span class="p">(</span><span class="n">do_remote_action</span><span class="p">,</span>
+                         <span class="s2">&quot;remote_file1&quot;</span><span class="p">,</span>
+                         <span class="s2">&quot;/tmp/remote_file1&quot;</span><span class="p">,</span>
+                         <span class="n">targets</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;/tmp/remote_file1&quot;</span><span class="p">]</span>
+                         <span class="p">)</span>
+</pre></div>
+</div>
+<p>See, working with Dask section, on setting up Dask with RemoteOrchestratorPy.</p>
+</section>
+</section>
+<section id="set-task-fetch-files-iter">
+<h3>set_task_fetch_files_iter<a class="headerlink" href="#set-task-fetch-files-iter" title="Link to this heading"></a></h3>
+<p>Creates tasks, one per given file to fetch from the remote machine to a local directory.</p>
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">set_task_fetch_files_iter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">files_to_fetch</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">local_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'/tmp'</span></span></em><span class="sig-paren">)</span></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>files_to_fetch</strong> (<em>list</em><em> of </em><em>str</em>) – A list of file paths to be fetched from the remote machine.</p></li>
+<li><p><strong>local_dir</strong> (<em>str</em>) – The local directory where the files will be fetched to. Defaults to “/tmp”.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="set-task-local-step-post">
+<h3>set_task_local_step_post<a class="headerlink" href="#set-task-local-step-post" title="Link to this heading"></a></h3>
+<p>Sets the given function to be executed as a task as part of
+local step post phase.</p>
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">set_task_local_step_post(self,</span> <span class="pre">step_func,</span> <span class="pre">*args,</span> <span class="pre">**kwargs):</span></span></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>step_func</strong> (<em>callable</em>) – The function to be executed as the local step post-function.</p></li>
+<li><p><strong>args</strong> (<em>tuple</em>) – Additional positional arguments to be passed to the <cite>step_func</cite>.</p></li>
+<li><p><strong>kwargs</strong> (<em>dict</em>) – task dependency arguments.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+</section>
+<section id="demo-a-complete-workflow">
+<h1>Demo: A complete workflow<a class="headerlink" href="#demo-a-complete-workflow" title="Link to this heading"></a></h1>
+<section id="initialize-rtas">
+<h2>Initialize RTAS<a class="headerlink" href="#initialize-rtas" title="Link to this heading"></a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">doit_rtas</span> <span class="kn">import</span> <span class="n">RemoteTaskActionSequence</span><span class="p">,</span> <span class="n">doit_taskify</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">from</span> <span class="nn">fabric</span> <span class="kn">import</span> <span class="n">Connection</span><span class="p">,</span> <span class="n">Config</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">doit.tools</span> <span class="kn">import</span> <span class="n">run_once</span>
+
+<span class="n">ipv6</span> <span class="o">=</span> <span class="s2">&quot;&lt;&gt;&quot;</span>
+
+<span class="n">connect_kwargs</span> <span class="o">=</span> <span class="p">{</span>
+<span class="s2">&quot;key_filename&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;&gt;&quot;</span>
+<span class="p">}</span>
+<span class="n">fabric_config</span> <span class="o">=</span> <span class="n">Config</span><span class="p">(</span><span class="n">overrides</span><span class="o">=</span><span class="p">{</span>
+<span class="s1">&#39;connect_kwargs&#39;</span><span class="p">:</span> <span class="n">connect_kwargs</span><span class="p">,</span>
+ <span class="s1">&#39;run&#39;</span><span class="p">:</span> <span class="p">{</span>
+     <span class="s1">&#39;hide&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+     <span class="s1">&#39;warn&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+     <span class="s1">&#39;echo&#39;</span><span class="p">:</span> <span class="kc">True</span>
+<span class="p">},</span>
+<span class="p">})</span>
+
+<span class="n">fabric_conn_root</span> <span class="o">=</span> <span class="n">Connection</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="n">ipv6</span><span class="p">,</span>
+                      <span class="n">user</span><span class="o">=</span><span class="s2">&quot;root&quot;</span><span class="p">,</span>
+             <span class="n">config</span><span class="o">=</span><span class="n">fabric_config</span>
+             <span class="p">)</span>
+
+<span class="n">fabric_conn_adming</span> <span class="o">=</span> <span class="n">Connection</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="n">ipv6</span><span class="p">,</span>
+                      <span class="n">user</span><span class="o">=</span><span class="s2">&quot;adming&quot;</span><span class="p">,</span>
+                      <span class="n">config</span><span class="o">=</span><span class="n">fabric_config</span>
+                      <span class="p">)</span>
+
+<span class="n">rtas</span> <span class="o">=</span> <span class="n">RemoteTaskActionSequence</span><span class="p">(</span><span class="n">ipv6</span><span class="p">,</span> <span class="p">(</span><span class="s2">&quot;root&quot;</span><span class="p">,</span>     <span class="n">fabric_conn_root</span><span class="p">),</span>
+             <span class="p">(</span><span class="s2">&quot;admin&quot;</span><span class="p">,</span> <span class="n">fabric_conn_admin</span>
+             <span class="p">)</span>
+
+<span class="n">rtas</span><span class="o">.</span><span class="n">set_active_user</span><span class="p">(</span><span class="s2">&quot;admin&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="define-a-doit-task-using-rtas">
+<h2>Define a doit task using RTAS<a class="headerlink" href="#define-a-doit-task-using-rtas" title="Link to this heading"></a></h2>
+<p>The example code defines both super and sub rtas.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">task_showcase_rtas</span><span class="p">(</span><span class="n">all_rtas</span><span class="p">):</span>
+<span class="w"> </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd"> all_rtas: list of rtas one for reach remote machine on which to execute the task.</span>
+<span class="sd"> &quot;&quot;&quot;</span>
+ <span class="c1"># a group task to prefix all starting task of the</span>
+ <span class="c1"># rtas</span>
+ <span class="n">trec</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;basename&#39;</span><span class="p">:</span> <span class="s2">&quot;deploy_webserver_runtime_prefix&quot;</span><span class="p">,</span>
+          <span class="s1">&#39;actions&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+         <span class="s1">&#39;task_dep&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;&lt;&gt;&quot;</span><span class="p">]</span>
+         <span class="p">}</span>
+
+ <span class="k">yield</span> <span class="n">trec</span>
+ <span class="n">rtas_tasks</span> <span class="o">=</span> <span class="p">[]</span>
+ <span class="k">for</span> <span class="n">rtas</span> <span class="ow">in</span> <span class="n">all_rtas</span><span class="p">:</span>
+     <span class="n">rtas</span><span class="o">.</span><span class="n">set_super_task_seq</span><span class="p">(</span><span class="s2">&quot;deploy_webserver_runtime&quot;</span><span class="p">)</span>
+     <span class="n">rtas</span><span class="o">.</span><span class="n">set_task_local_step_pre</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+     <span class="n">rta</span><span class="o">.</span><span class="n">set_task_ship_files_iter</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+     <span class="n">remote_task_append</span> <span class="o">=</span> <span class="nb">set</span><span class="o">.</span><span class="n">set_task_remote_step_iter</span><span class="p">()</span>
+
+     <span class="c1"># add a series of remote steps each with its own qualifier</span>
+     <span class="n">remote_task_append</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+     <span class="n">remote_task_append</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+     <span class="o">...</span>
+
+     <span class="n">rtas</span><span class="o">.</span><span class="n">set_task_fetch_files_iter</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+     <span class="n">rtas</span><span class="o">.</span><span class="n">set_task_local_step_post</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+
+     <span class="c1"># store the final task of this rtas</span>
+     <span class="n">rtas_tasks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">rtas</span><span class="o">.</span><span class="n">task_label</span><span class="p">)</span>
+     <span class="c1"># generate a series of tasks for super task sequence</span>
+     <span class="k">yield from</span> <span class="n">rtas</span>
+
+     <span class="c1"># define sub rtas: e.g., rtas that configures individual websites</span>
+     <span class="k">for</span> <span class="o">&lt;</span><span class="n">website</span><span class="o">&gt;</span> <span class="ow">in</span> <span class="n">hosted_websites</span><span class="p">:</span>
+         <span class="n">rtas</span><span class="o">.</span><span class="n">set_new_subtask_seq</span><span class="p">(</span><span class="n">id_args</span> <span class="o">=</span> <span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="o">&lt;</span><span class="n">website</span><span class="o">&gt;</span><span class="p">)]</span>
+                                  <span class="p">)</span>
+         <span class="c1"># define work for subtask sequence</span>
+         <span class="o">...</span>
+         <span class="o">...</span>
+
+         <span class="c1"># store the final task of this rtas</span>
+         <span class="n">rtas_tasks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">rtas</span><span class="o">.</span><span class="n">task_label</span><span class="p">)</span>
+         <span class="k">yield from</span> <span class="n">rtas</span>
+
+         <span class="k">pass</span>
+     <span class="k">pass</span>
+
+ <span class="c1"># group task represents the teardown for super and all the subtasks</span>
+ <span class="n">trec</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;basename&#39;</span><span class="p">:</span> <span class="s2">&quot;deploy_webserver_runtime&quot;</span><span class="p">,</span>
+         <span class="s1">&#39;actions&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+         <span class="s1">&#39;task_dep&#39;</span><span class="p">:</span> <span class="n">rtas_tasks</span><span class="p">,</span>
+         <span class="p">}</span>
+
+ <span class="k">yield</span> <span class="n">trec</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="decorator">
+<h1>Decorator<a class="headerlink" href="#decorator" title="Link to this heading"></a></h1>
+<p>RemoteOrchestratorPy provides  <cite>doit_taskify</cite> to elimate some
+of the repeatitive boilerplate and make the code look more clean. It derives the label from name of the function and appends setup and teardown tasks as required:</p>
+<p>Usage shown below</p>
+<section id="demo-for-doit-taskify">
+<h2>Demo for doit_taskify<a class="headerlink" href="#demo-for-doit-taskify" title="Link to this heading"></a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">all_rtas</span> <span class="o">=</span> <span class="p">[</span><span class="n">rtas</span><span class="p">]</span>
+<span class="nd">@doit_taskify</span><span class="p">(</span><span class="n">all_rtas</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">deploy_webserver_runtime</span><span class="p">(</span><span class="n">rtas</span><span class="p">):</span>
+  <span class="n">rtas</span><span class="o">.</span><span class="n">set_task_local_step_pre</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+  <span class="n">rta</span><span class="o">.</span><span class="n">set_task_ship_files_iter</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+  <span class="n">remote_task_append</span> <span class="o">=</span> <span class="nb">set</span><span class="o">.</span><span class="n">set_task_remote_step_iter</span><span class="p">()</span>
+
+  <span class="c1"># add a series of remote steps each with its own qualifier</span>
+  <span class="n">remote_task_append</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+  <span class="n">remote_task_append</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+  <span class="o">...</span>
+
+  <span class="n">rtas</span><span class="o">.</span><span class="n">set_task_fetch_files_iter</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+  <span class="n">rtas</span><span class="o">.</span><span class="n">set_task_local_step_post</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+
+
+  <span class="c1"># generate tasks  for super task sequence</span>
+  <span class="k">yield from</span> <span class="n">rtas</span>
+
+  <span class="c1"># define sub rtas: e.g., rtas that configures individual websites</span>
+  <span class="k">for</span> <span class="o">&lt;</span><span class="n">website</span><span class="o">&gt;</span> <span class="ow">in</span> <span class="n">hosted_websites</span><span class="p">:</span>
+      <span class="n">rtas</span><span class="o">.</span><span class="n">set_new_subtask_seq</span><span class="p">(</span><span class="n">id_args</span> <span class="o">=</span> <span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="o">&lt;</span><span class="n">website</span><span class="o">&gt;</span><span class="p">)]</span>
+                                   <span class="p">)</span>
+      <span class="c1"># define work for subtask sequence</span>
+      <span class="o">...</span>
+      <span class="o">...</span>
+
+      <span class="c1"># store the final task of this rtas</span>
+      <span class="k">yield from</span> <span class="n">rtas</span>
+</pre></div>
+</div>
+<p>A typical output of execution of RTAS would look as follows:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w">  </span>/home/kabira/Development/cloudworks-monallabs/RemoteOrchestratorPy/devel_tests/td_doit_rtas.py
+--<span class="w"> </span>test_drive_rtas:45.76.4.30::local_step_pre
+--<span class="w"> </span>test_drive_rtas:45.76.4.30::ship_file:super_0
+--<span class="w"> </span>test_drive_rtas:45.76.4.30::ship_file:super_1
+.<span class="w">  </span>test_drive_rtas:45.76.4.30::ship_file:super_2
+<span class="k">in</span><span class="w"> </span>RemoteFileDep:<span class="w"> </span>dependency<span class="w"> </span>is<span class="w"> </span>not<span class="w"> </span>uptodate...rerun<span class="w"> </span>task
+.<span class="w">  </span>test_drive_rtas:45.76.4.30::remote_step
+<span class="k">in</span><span class="w"> </span>RemoteFileDep:<span class="w"> </span>dependency<span class="w"> </span>is<span class="w"> </span>uptodate
+--<span class="w"> </span>test_drive_rtas:45.76.4.30::fetch_file:remote_file1
+<span class="k">in</span><span class="w"> </span>RemoteFileDep:<span class="w"> </span>dependency<span class="w"> </span>is<span class="w"> </span>uptodate
+--<span class="w"> </span>test_drive_rtas:45.76.4.30::fetch_file:remote_file2
+<span class="k">in</span><span class="w"> </span>RemoteFileDep:<span class="w"> </span>dependency<span class="w"> </span>is<span class="w"> </span>uptodate
+--<span class="w"> </span>test_drive_rtas:45.76.4.30::fetch_file:remote_file3
+--<span class="w"> </span>test_drive_rtas:45.76.4.30::local_step_post
+.<span class="w">  </span>test_drive_rtas:45.76.4.30::worker_id:0:local_step_pre
+<span class="nb">local</span><span class="w"> </span>step<span class="w"> </span>called:<span class="w">  </span>sub_workder_id:0
+--<span class="w"> </span>test_drive_rtas:45.76.4.30::worker_id:0:ship_file:sub_workder_id:0_0
+--<span class="w"> </span>test_drive_rtas:45.76.4.30::worker_id:0:ship_file:sub_workder_id:0_1
+--<span class="w"> </span>test_drive_rtas:45.76.4.30::worker_id:0:ship_file:sub_workder_id:0_2
+<span class="k">in</span><span class="w"> </span>RemoteFileDep:<span class="w"> </span>dependency<span class="w"> </span>is<span class="w"> </span>uptodate
+--<span class="w"> </span>test_drive_rtas:45.76.4.30::worker_id:0:remote_step
+<span class="k">in</span><span class="w"> </span>RemoteFileDep:<span class="w"> </span>dependency<span class="w"> </span>is<span class="w"> </span>uptodate
+.<span class="w">  </span>test_drive_rtas:45.76.4.30::worker_id:0:fetch_file:remote_file01
+<span class="k">in</span><span class="w"> </span>RemoteFileDep:<span class="w"> </span>dependency<span class="w"> </span>is<span class="w"> </span>uptodate
+.<span class="w">  </span>test_drive_rtas:45.76.4.30::worker_id:0:fetch_file:remote_file02
+<span class="k">in</span><span class="w"> </span>RemoteFileDep:<span class="w"> </span>dependency<span class="w"> </span>is<span class="w"> </span>uptodate
+.<span class="w">  </span>test_drive_rtas:45.76.4.30::worker_id:0:fetch_file:remote_file03
+.<span class="w">  </span>test_drive_rtas:45.76.4.30::worker_id:0:local_step_post
+</pre></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Kabira K..</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
