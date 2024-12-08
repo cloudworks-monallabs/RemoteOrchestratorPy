@@ -243,9 +243,11 @@ To install RemoteOrchestratePy clone the repo and include the code path in the P
 
 .. code-block:: bash
    pip install doit patchwork dask[distributed]
-
+   git clone git@github.com:cloudworks-monallabs/PyDoIt-ExtnTools.git
    git clone git@github.com:cloudworks-monallabs/RemoteOrchestratorPy.git
 
+#. Add both repos path to `PYTHONPATH`
+   
 Running
 ~~~~~~~
 
