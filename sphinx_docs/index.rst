@@ -6,9 +6,9 @@
 Welcome to RemoteOrchestorPy's documentation!
 =============================================
 
-RemoteOrchestratePy integrates PyDoit with Fabric and Dash, providing a straightforward way to express builds and workflows over a single or multiple remote machines.
+RemoteOrchestratePy provides a straightforward way to express builds and workflows over a cluster of  machines.
 
-For those eager to dive in, the example below demonstrates how to use RemoteOrchestratePy to set up and deploy a webserver, along with a collection of websites to be hosted on it:
+For the TLDR folks, the example below demonstrates how to use RemoteOrchestratePy to set up and deploy a webserver, along with a collection of websites to be hosted on it:
 
 .. code-block::
    
@@ -43,7 +43,7 @@ For those eager to dive in, the example below demonstrates how to use RemoteOrch
 
 .. note::
    
-   See :ref:`demo` on how to initialize `all_rtas` object that defines set of target machines for deployment. 
+   See :ref:`demo` on how to initialize `all_rtas` object --  the set of machines  as target for deployment
 
 .. toctree::
    :maxdepth: 2

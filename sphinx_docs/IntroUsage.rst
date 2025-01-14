@@ -59,11 +59,78 @@ Pydoit provides a range of standard and custom constructs for defining task depe
   - `pydoit` provided callables :  These callables can be used with `uptodate` to define conditions for checking if a task needs to be re-executed:
 
     - `run_once`: execute a task only once (used for tasks without dependencies)
+      
+      .. code-block::
+	 
+	 def task_initialize():
+	    return {
+            'actions': ['initialize_tool --setup'],
+            'uptodate': [run_once],  # This ensures the task runs only once.
+            }  
+
     - `result_dep`:  check if the result of another task has changed
+
+      .. code-block::
+	 
+	 from doit.tools import result_dep
+
+	 def task_version():
+		 return {'actions': ["hg tip --template '{rev}:{node}'"]}
+
+	 def task_send_email():
+		 return {'actions': ['echo "TODO: send an email"'],
+			 'uptodate': [result_dep('version')]}
+
+      - doit will keep track of the output of the task version and will execute send_email only when the mercurial repository has a new version since last time doit was executed.
+	
+
+		
     - `timeout`: indicate that a task should “expire” after a certain time interval
+
+      .. code-block::
+	 import datetime
+	 from doit.tools import timeout
+
+	 def task_expire():
+	     return {
+		     'actions': ['echo test expire; date'],
+		     'uptodate': [timeout(datetime.timedelta(minutes=5))],
+		     'verbosity': 2,
+		    }
+
+	   
     - `config_changed`: check for changes in a “configuration” string or dictionary
+
+      .. code-block::
+	 
+	 from doit.tools import config_changed
+
+	 option = "AB"
+	 def task_with_params():
+	     return {'actions': ['echo %s' % option],
+		     'uptodate': [config_changed(option)],
+		     'verbosity': 2,
+		     }
+	    
     - `check_timestamp_unchanged()`: check access, status change/create or modify timestamp of a given file/directory
 
+      .. code-block::
+	 def task_create_foo():
+	  return {
+	      'actions': ['touch foo', 'chmod 750 foo'],
+	      'targets': ['foo'],
+	      'uptodate': [True],
+	      }
+
+	 def task_on_foo_changed():
+	     # will execute if foo or its metadata is modified
+	     return {
+		 'actions': ['echo foo modified'],
+		 'task_dep': ['create_foo'],
+		 'uptodate': [check_timestamp_unchanged('foo', 'ctime')],
+		 }
+
+	
     
 - **calc_dep**:  Compute the task depdency as a separate task. Also see `delayed task execution <https://pydoit.org/task-creation.html#delayed-task-creation>`_
 

@@ -8,67 +8,23 @@ Things to keep in mind:
 - uptodate
 """
 
-
+import functools
 from doit_rtas_helpers import (log_command_exec_status,
                                ship_file,
                                fetch_file,
                                get_ref_name
                                )
 
-from patchwork.files import exists
+#from patchwork.files import exists
 from doit_extntools import RemoteFilesDep
 from pathlib import Path
 import logging
 logger = logging.getLogger(__name__)
 
-def make_task(func):
-    """make decorated function a task-creator"""
-    #func.create_doit_tasks = func
-    # flip
-    def another_task_func():
-        trec = {'basename': "switched_task",
-                'name': "task1",
-                'actions': ['echo bye'],
-                #'task_dep': [rtas.task_label]
-                }
-        yield trec
-
-    another_task_func.create_doit_tasks = another_task_func
-    return another_task_func
 
 
-# def doit_taskify(func):
-#     """
-#     convert a function to a rtas task sequence generator function.
-#     prefix and suffix task will be added. 
-#     """
-#     print ("did we ever got called")
-#     rtas_basename = func.__name__
-#     def doit_task(rtas):
-#         print("create task for rtas with ipv6 = ", rtas.ipv6)
-#         trec = {'basename': f"{rtas_basename}_prefix",
-#                 'actions': None,
-#                 }
-#         yield trec
-        
-#         rtas.set_new_task_seq(rtas_basename)
-#         yield from rtas
-        
-        
-#         yield trec
-        
-
-#     trec = {'basename': rtas_basename,
-#             'actions': None,
-#             'task_dep': [rtas.task_label]
-#             }
-        
-#     yield trec
-    
-#     # make doit read tasks from this function
-#     doit_task.create_doit_tasks = doit_task
-
-#     return doit_task
+def get_leaf_task_label(TASKGENFUNC):
+    return f"{TASKGENFUNC.__name__}_leaf_final_"
 
 def doit_taskify(all_rtas, **kwargs):
     """
@@ -80,9 +36,12 @@ def doit_taskify(all_rtas, **kwargs):
         prefix and suffix task will be added. 
         """
         rtas_basename = func.__name__
+        func.__root_enter_task_label__ = f"{rtas_basename}_root_enter_"
+        func.__leaf_final_task_label__ = f"{rtas_basename}_leaf_final_"
+        @functools.wraps(func)
         def doit_task():
             #setup group task
-            trec = {'basename': f"{rtas_basename}_prefix",
+            trec = {'basename': func.__root_enter_task_label__,
                     'actions': None,
                     'task_dep': kwargs.get('task_dep', [])
 
@@ -98,8 +57,9 @@ def doit_taskify(all_rtas, **kwargs):
                 
 
             # the teardown group task:
-            # has task dep to all super and sup rtas teardown task 
-            trec = {'basename': rtas_basename,
+            # has task dep to all super and sup rtas teardown task
+            print("ALL_RTAS_TASKS = ", all_rtas_tasks)
+            trec = {'basename': f"{rtas_basename}_leaf_final_",
                     'actions': None,
                     'task_dep': all_rtas_tasks
                     }
@@ -127,19 +87,22 @@ def remote_exec_cmd(self,  task_label, *args):
     return status
 
 def check_remote_files_exists(fabric_conn, remote_targets):
-
-    logger.info(f"remote_step: Checking if remote target exists: { remote_targets}")
+    assert False
+    # no longer using patchwork since it has not been updated for python 3.12
     
-    for _fs in remote_targets:
-        if not exists(fabric_conn, _fs):
-            logger.info(
-                f"Path {_fs} does not exits")
-            return False
+    # logger.info(f"remote_step: Checking if remote target exists: { remote_targets}")
+    
+    # for _fs in remote_targets:
+    #     if not exists(fabric_conn, _fs):
+    #         logger.info(
+    #             f"Path {_fs} does not exits")
+    #         return False
 
-    logger.info(f"All remote targets  exists")
+    # logger.info(f"All remote targets  exists")
         
-    return True
-            
+    # return True
+
+
 class RemoteTaskActionSequence:
     """
     set the task in sequence:
@@ -178,7 +141,8 @@ class RemoteTaskActionSequence:
 
         self.ssh_users_fabric_conn = {}
         self.active_conn = None
-        
+        # a flag to abort execution of remaing tasks
+        self.task_failed_abort_execution = False
         make_active = True
         for user_name, fabric_conn in args:
             self.add_ssh_user(user_name, fabric_conn, make_active=make_active)
@@ -214,7 +178,7 @@ class RemoteTaskActionSequence:
             'name': "local_step_pre",
             'task_dep' : kwargs.get('task_dep', []),
             'actions': [(step_func, args)],
-            'doc': f"""{self.task_label}:{kwargs.get("doc", "local-step-pre")}"""
+            #'doc': f"""{self.suffix_task_label}:{kwargs.get("doc", "local-step-pre")}"""
             }
         
         if 'targets' in kwargs:
@@ -281,7 +245,7 @@ class RemoteTaskActionSequence:
                                     
                                  ],
                     'file_dep': [file_to_ship],
-                    'doc': f"{self.task_label}: ship local file to remote: {file_to_ship}",
+                    #'doc': f"{self.suffix_task_label}: ship local file to remote: {file_to_ship}",
                     'task_dep': [task_label_ship_files_prefix]
 
                     }
@@ -394,7 +358,7 @@ class RemoteTaskActionSequence:
                     'actions': [(remote_exec_cmd, [self,
                                                    f"{self.basename}:remote_step:{label}",
                                                    cmd])],
-                    'doc': f"{self.task_label}: remote step : {label}",
+                    #'doc': f"{self.suffix_task_label}: remote step : {label}",
                     }
             else:
                 #cmd is a dask function
@@ -402,7 +366,7 @@ class RemoteTaskActionSequence:
                     'basename': self.basename,
                     'name': f"remote_step:{label}",
                     'actions': [cmd],
-                    'doc': f"{self.task_label}: remote step : {label}",
+                    #'doc': f"{self.suffix_task_label}: remote step : {label}",
                     }
 
 
@@ -502,7 +466,7 @@ class RemoteTaskActionSequence:
                     
 
                     'uptodate': [RemoteFilesDep(self.active_conn,[file_to_fetch])], 
-                    'doc': f"{self.task_label}: fetch-file {file_to_fetch}",
+                    #'doc': f"{self.suffix_task_label}: fetch-file {file_to_fetch}",
                     'task_dep': [task_label_fetch_files_prefix]
                     
                     
@@ -542,7 +506,7 @@ class RemoteTaskActionSequence:
             'name': "local_step_post",
             'task_dep' : kwargs.get('task_dep', []),
             'actions': [(step_func, args)],
-            'doc': f"{self.task_label}: local_step_post"
+            #'doc': f"{self.suffix_task_label}: local_step_post"
             }
         if 'targets' in kwargs:
             trec['targets'] = kwargs.get('targets')
@@ -631,7 +595,7 @@ class RemoteTaskActionSequence:
             yield self.task_local_step_post
 
         trec = {'basename': self.basename,
-                'name': "rtas",
+                'name': "leaf_final_",
                 'task_dep': [self.final_task
                                  
                              ],
@@ -646,8 +610,10 @@ class RemoteTaskActionSequence:
         """
         task_dep  will be anchored on to prefix task
         """
-        
-        self.basename_super = f"""{basename}:{self.ipv6}:{ "_".join([str(_) for _ in id_args])}"""
+        self.basename_super = f"""{basename}:{self.ipv6}"""
+        if id_args:
+            self.basename_super = f"""{basename_super}:{ "_".join([str(_) for _ in id_args])}"""
+            
         self.basename = self.basename_super
         self.task_local_step_pre = None
         self.task_ship_files_iter = None
@@ -656,20 +622,21 @@ class RemoteTaskActionSequence:
         self.task_fetch_files_iter = None
         self.task_local_step_post = None
         self.final_task = None
-
+        self.task_failed_abort_execution = False
         # The super-rtas and all its sub-rtas are defined
         # by this task label. This is the last task in the group
-        self.task_label = f"{self.basename_super}:rtas"
+        #self.suffix_task_label = f"{self.basename_super}::rtas"
+
 
         # all the rtas (super and sub) defined under this rtas
         # will be used as dependency for group task with
         # basename (without the ipv6)
-        self.rtas_taskseq_labels = [f"{self.basename_super}:rtas"]
+        self.rtas_taskseq_labels = [f"{self.basename_super}:leaf_final_"]
 
 
         # all first task in the rtas
         # should have task dep to the prefix (aka setup) task
-        self.task_dep = [f"{basename}_prefix"]
+        self.task_dep = [f"{basename}_root_enter_"]
 
     def set_new_subtask_seq(self, id_args= []):
         """
@@ -679,7 +646,7 @@ class RemoteTaskActionSequence:
         self.basename = f"""{self.basename_super}:{ "_".join([str(_) for _ in id_args])}"""
         # non doit_taskify relies on task_label to accumalate tasks generated
         # doit_taskify relies on rtas_taskseq_labels
-        self.task_label = f"{self.basename}:rtas"
+        #self.suffix_task_label = f"{self.basename}::rtas"
         
         self.task_local_step_pre = None
         self.task_ship_files_iter = None
@@ -688,8 +655,11 @@ class RemoteTaskActionSequence:
         self.task_fetch_files_iter = None
         self.task_local_step_post = None
         # these will be added as task_dep to the final group task
-        self.rtas_taskseq_labels.append(f"{self.basename}:rtas")
+        self.rtas_taskseq_labels.append(f"{self.basename}::leaf_final_")
         # all sub-rtas has dependency to the teardown task of
         # the super task
-        self.task_dep = [f"{self.basename_super}:rtas"]
+        self.task_dep = [f"{self.basename_super}::leaf_final"]
         pass
+
+
+
