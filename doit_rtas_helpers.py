@@ -12,27 +12,28 @@ logger = logging.getLogger(__name__)
 from typing import NamedTuple
 # use to describe behaviour for ship and fetch file
 class FileConfig(NamedTuple):
-    filename: str
+    file_path: str
     clean_local: bool = False
     clean_remote: bool = False
-    remote_basename: str = None
+    target_path: str = None
 
+    
     
 def get_ref_name(trec):
     """
     """
-
-
     return f"""{trec['basename']}:{trec['name']}"""
 
 
 def ship_file(fabric_conn,
               file_to_ship,
-              dest_dir
+              dest_path
               ):
-    try: 
-        fabric_conn.put(file_to_ship, dest_dir)
-
+    """
+    dest_path: a Path like expression
+    """
+    try:
+        fabric_conn.put(file_to_ship, str(dest_path))
     except Exception as e:
         logger.debug(f"FILE-ship-FAILURE: {file_to_ship} due to {e}")
         raise e
@@ -54,6 +55,20 @@ def fetch_file(fabric_conn,
         
     pass
 
+def teardown_file(fabric_conn, fileconfig):
+    if fileconfig.clean_local:
+        print("cleaning up local file")
+        fileconfig.file_path.unlink()
+
+    if fileconfig.clean_remote:
+        print("cleaning up remote file")
+        result = fabric_conn.run(f"rm -f {fileconfig.target_path}", warn=True)
+        if result.ok:
+            logger.info(f"File {fileconfig.target_path} deleted successfully.")
+        else:
+            logger.debug(f"Failed to delete file: {fileconfig.target_path}")
+
+    
 def log_command_exec_status(cmdstr, result, task_label, rtas):
     stdout = result.stdout.strip()
     stderr = result.stderr.strip()
@@ -141,8 +156,8 @@ exit 0
 
     
     # put a teardown task to remove the file
-    rtas.set_task_ship_files_iter([f"{current_file_directory}/remote_execution_service.py",
-                                   launch_service_fh.name
+    rtas.set_task_ship_files_iter([FileConfig(f"{current_file_directory}/remote_execution_service.py", False, True),
+                                   FileConfig(launch_service_fh.name, True, True)
                                    ],
                                   "/tmp"
                                   )
