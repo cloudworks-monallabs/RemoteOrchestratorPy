@@ -12,13 +12,18 @@ import functools
 from doit_rtas_helpers import (log_command_exec_status,
                                ship_file,
                                fetch_file,
-                               get_ref_name
+                               get_ref_name,
+                               setup_remote,
+                               FileConfig
                                )
 
-#from patchwork.files import exists
+from patchwork.files import exists
 from doit_extntools import RemoteFilesDep
 from pathlib import Path
 import logging
+
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -51,14 +56,16 @@ def doit_taskify(all_rtas, **kwargs):
 
             all_rtas_tasks = []
             for rtas in all_rtas:
-                rtas.set_super_task_seq(rtas_basename)
-                yield from func(rtas)
-                all_rtas_tasks.extend(rtas.rtas_taskseq_labels)
+                if rtas.task_failed_abort_execution == False:
+                    rtas.set_super_task_seq(rtas_basename)
+                    yield from func(rtas)
+                    all_rtas_tasks.extend(rtas.rtas_taskseq_labels)
+                else:
+                    logger.info(f"RTAS-abort-taskgen: {rtas.ipv6}")
                 
 
             # the teardown group task:
             # has task dep to all super and sup rtas teardown task
-            print("ALL_RTAS_TASKS = ", all_rtas_tasks)
             trec = {'basename': f"{rtas_basename}_leaf_final_",
                     'actions': None,
                     'task_dep': all_rtas_tasks
@@ -71,36 +78,48 @@ def doit_taskify(all_rtas, **kwargs):
     return wrapper
 
 
-def remote_exec_cmd(self,  task_label, *args):
+def remote_exec_cmd(rtas,  task_label, *args):
 
     status = "Success"
 
     for cmdstr in args:
 
-        result = self.active_conn.run(cmdstr, hide=True)
-        
+        result = rtas.active_conn.run(cmdstr, hide=True)
+        rtas.remote_task_results[task_label] = result
         status = log_command_exec_status(cmdstr,
                                          result,
                                          task_label,
-                                         self.ipv6
+                                         rtas
                                 )
     return status
 
 def check_remote_files_exists(fabric_conn, remote_targets):
-    assert False
-    # no longer using patchwork since it has not been updated for python 3.12
     
-    # logger.info(f"remote_step: Checking if remote target exists: { remote_targets}")
-    
-    # for _fs in remote_targets:
-    #     if not exists(fabric_conn, _fs):
-    #         logger.info(
-    #             f"Path {_fs} does not exits")
-    #         return False
+    for _fs in remote_targets:
+        if not exists(fabric_conn, _fs):
+            logger.info(
+                f"Path {_fs} does not exits")
+            return False
 
-    # logger.info(f"All remote targets  exists")
-        
-    # return True
+    return True
+
+def action_wrapper(rtas, action_func):
+
+    def wrapper(*args, **kwargs):
+        if rtas.task_failed_abort_execution:
+            logger.info(f"RTAS-skip-task: {rtas.ipv6} task_failed_abort_execution is True")
+            return False
+        try:
+            return action_func(*args, **kwargs)
+            
+        except Exception as e:
+            rtas.task_failed_abort_execution = True
+            rtas.task_failed_exception = e
+            logger.info(f"RTAS-abort-task: {rtas.ipv6} raised exception {e}")
+            return False
+        return False
+
+    return wrapper
 
 
 class RemoteTaskActionSequence:
@@ -138,17 +157,18 @@ class RemoteTaskActionSequence:
         # prefix task dependency
         self.task_dep = None
 
-
+        
         self.ssh_users_fabric_conn = {}
         self.active_conn = None
         # a flag to abort execution of remaing tasks
         self.task_failed_abort_execution = False
+        self.task_failed_exception = None
         make_active = True
         for user_name, fabric_conn in args:
             self.add_ssh_user(user_name, fabric_conn, make_active=make_active)
             make_active=False
             
-
+        
 
 
     def add_ssh_user(self, user_name, fabric_conn, make_active="False"):
@@ -173,11 +193,15 @@ class RemoteTaskActionSequence:
         args  will be passed stepfunc as is.
         **kwargs has task like targets, file_dep, uptodate e
         """
+        
         trec = {
             'basename': self.basename,
             'name': "local_step_pre",
             'task_dep' : kwargs.get('task_dep', []),
-            'actions': [(step_func, args)],
+            'actions': [(action_wrapper(self, step_func),
+                         args
+                         )
+                        ],
             #'doc': f"""{self.suffix_task_label}:{kwargs.get("doc", "local-step-pre")}"""
             }
         
@@ -267,7 +291,7 @@ class RemoteTaskActionSequence:
                                  
                                  ],
                 'actions': None,
-                    'doc': f"{self.task_label}: group task for file ship to remote"
+                    #'doc': f"{self.task_label}: group task for file ship to remote"
                 }
 
         
@@ -355,9 +379,12 @@ class RemoteTaskActionSequence:
                 trec = {
                     'basename': self.basename,
                     'name': f"remote_step:{label}",
-                    'actions': [(remote_exec_cmd, [self,
+                    'actions': [(action_wrapper(self, remote_exec_cmd),
+                                 [self,
                                                    f"{self.basename}:remote_step:{label}",
-                                                   cmd])],
+                                                   cmd]
+                                 )
+                                ],
                     #'doc': f"{self.suffix_task_label}: remote step : {label}",
                     }
             else:
@@ -376,7 +403,7 @@ class RemoteTaskActionSequence:
             # local_file_dep is dependency on local file and not on the files on remote destination 
             if 'local_file_dep' in kwargs:
                 trec['file_dep'] = kwargs.get('local_file_dep')
-            
+            trec['teardown'] = kwargs.get('teardown', [])
         
             #target implies remote targets
             if 'targets' in kwargs:
@@ -505,7 +532,9 @@ class RemoteTaskActionSequence:
             'basename': self.basename,
             'name': "local_step_post",
             'task_dep' : kwargs.get('task_dep', []),
-            'actions': [(step_func, args)],
+            'actions': [(action_wrapper(self,step_func),
+                         args)
+                        ],
             #'doc': f"{self.suffix_task_label}: local_step_post"
             }
         if 'targets' in kwargs:
@@ -623,6 +652,7 @@ class RemoteTaskActionSequence:
         self.task_local_step_post = None
         self.final_task = None
         self.task_failed_abort_execution = False
+        self.task_failed_exception = None
         # The super-rtas and all its sub-rtas are defined
         # by this task label. This is the last task in the group
         #self.suffix_task_label = f"{self.basename_super}::rtas"
@@ -637,7 +667,9 @@ class RemoteTaskActionSequence:
         # all first task in the rtas
         # should have task dep to the prefix (aka setup) task
         self.task_dep = [f"{basename}_root_enter_"]
-
+        # capture the results of remote task execution
+        # Note: only the last executed rtas results are maintained
+        self.remote_task_results = {}
     def set_new_subtask_seq(self, id_args= []):
         """
         subtask sequence:  a task sequence on the target node with additional qualifiers
