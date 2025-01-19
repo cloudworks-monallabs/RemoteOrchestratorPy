@@ -15,11 +15,13 @@ from doit_rtas_helpers import (log_command_exec_status,
                                get_ref_name,
                                setup_remote,
                                FileConfig,
-                               teardown_file
+                               teardown_shipfile,
+                               teardown_fetchfile
+                               
                                )
 
 from patchwork.files import exists
-from doit_extntools import RemoteFilesDep
+from doit_extntools import RemoteFilesDep, RemoteCommandError
 from pathlib import Path
 import logging
 logger = logging.getLogger(__name__)
@@ -166,8 +168,8 @@ class RemoteTaskActionSequence:
             self.add_ssh_user(user_name, fabric_conn, make_active=make_active)
             make_active=False
             
-        
-
+        self.os_type = kwargs.get("os_type", "openbsd")
+        print("os_type = ", self.os_type)
 
     def add_ssh_user(self, user_name, fabric_conn, make_active="False"):
         self.ssh_users_fabric_conn[user_name] = fabric_conn
@@ -261,7 +263,7 @@ class RemoteTaskActionSequence:
                 trec = {
                     'basename': self.basename,
 
-                    'name': f"ship_file:{fileconfig.target_path.name}",
+                    'name': f"ship_file:{fileconfig.target_path}",
                     'actions': [(ship_file, [self.active_conn,
                                              file_to_ship,
                                              target_path
@@ -282,7 +284,7 @@ class RemoteTaskActionSequence:
                     }
 
                 if fileconfig.clean_local or fileconfig.clean_remote:
-                    trec['teardown'] = [(teardown_file, [self.active_conn, fileconfig])]
+                    trec['teardown'] = [(teardown_shipfile, [self.active_conn, fileconfig])]
 
                 yield trec
 
@@ -297,7 +299,7 @@ class RemoteTaskActionSequence:
         # create a group task for all the shipped files
         trec = {'basename': self.basename,
                 'name': f"ship_files",
-                'task_dep': [f"{self.basename}:ship_file:{fileconfig.target_path.name}" for fileconfig in fileconfigs
+                'task_dep': [f"{self.basename}:ship_file:{fileconfig.target_path}" for fileconfig in fileconfigs
                              ],
                 'actions': None,
                 #'doc': f"{self.task_label}: group task for file ship to remote"
@@ -424,7 +426,8 @@ class RemoteTaskActionSequence:
             #file_dep implies remote file_dep
             if 'file_dep' in kwargs:
                 trec['uptodate'].append(RemoteFilesDep(self.active_conn,
-                                                       kwargs.get('file_dep')
+                                                       kwargs.get('file_dep'),
+                                                       os_type=self.os_type
                                                        )
                                         )
             remote_step_trecs.append(trec)
@@ -468,10 +471,12 @@ class RemoteTaskActionSequence:
     
         pass
 
-    
+
     def set_task_fetch_files_iter(self,
-                                  files_to_fetch,
-                                  local_dir="/tmp"):
+                                  fileconfigs,
+                                  local_dir,
+                                  **kwargs):
+        assert isinstance(local_dir, Path)
         self.task_fetch_files_prefix = {'basename': self.basename,
                                       'name': f"fetch_files_prefix",
                                       'task_dep': [],
@@ -484,29 +489,41 @@ class RemoteTaskActionSequence:
             self.task_dep = []
 
         def fetch_task_iter():
-            for file_to_fetch in files_to_fetch:
+            for fileconfig in fileconfigs:
+                file_to_fetch = fileconfig.file_path
                 file_basename = Path(file_to_fetch).name
+                target_path = local_dir/Path(file_to_fetch).name
+                if fileconfig.target_path:
+                    target_path = fileconfig.target_path
+                    
                 trec = {
                     'basename': self.basename,
 
-                    'name': f"fetch_file:{file_basename}",
+                    'name': f"fetch_file:{fileconfig.target_path}",
                     'actions': [(fetch_file, [self.active_conn,
                                               file_to_fetch,
-                                              local_dir
+                                              target_path
                                              ])
 
                                 ],
-                    'targets': [f"{local_dir}/{Path(file_to_fetch).name}"
+                    'targets': [target_path
                                 ],
                     
 
-                    'uptodate': [RemoteFilesDep(self.active_conn,[file_to_fetch])], 
+                    'uptodate': [RemoteFilesDep(self.active_conn,
+                                                [file_to_fetch],
+                                                os_type=self.os_type
+                                                )
+                                 ],
                     #'doc': f"{self.suffix_task_label}: fetch-file {file_to_fetch}",
                     'task_dep': [task_label_fetch_files_prefix]
-                    
-                    
                     }
 
+                if fileconfig.clean_local or fileconfig.clean_remote:
+                    trec['teardown'] = [(teardown_fetchfile,
+                                         [self.active_conn, fileconfig]
+                                         )
+                                        ]
                 yield trec
 
                 # create a group task for all the shipped files
@@ -514,18 +531,18 @@ class RemoteTaskActionSequence:
         # to add as depency to local_step_post
         trec = {'basename': self.basename,
                     'name': f"fetch_files",
-                    'task_dep': [f"{self.basename}:fetch_file:{Path(file_to_fetch).name}" for file_to_fetch in files_to_fetch
+                    'task_dep': [f"{self.basename}:fetch_file:{Path(fileconfig.target_path)}" for fileconfig in fileconfigs
                                  
                                  ],
                     'actions': None,
                     
-                    'doc': f"{self.task_label}: group-task: fetch-files"
+                    #'doc': f"{self.task_label}: group-task: fetch-files"
                     }
 
 
             
         self.task_fetch_files_group = trec
-        self.fetched_files = [f"{local_dir}/{Path(file_to_fetch).name}" for file_to_fetch in files_to_fetch]
+        self.fetched_files = [fileconfig.target_path for fileconfig in fileconfigs]
         self.task_fetch_files_iter  = fetch_task_iter()
         self.final_task = f"{self.basename}:fetch_files"
         pass

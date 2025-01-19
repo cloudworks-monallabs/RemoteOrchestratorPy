@@ -26,3 +26,66 @@
 #. pip install
    rpyc doit-api
    
+#. rpyc secure over ssl
+   - server : where RpyC server is created
+     - assume ssh keys are already generated
+   - client : the node which will connect to the server
+     - assume ssh keys are already generated
+       
+   -  Convert the SSH Private Key to PEM Format
+       .. code-block::
+	  openssl rsa -in server_privatekey -outform PEM -out server_privatekey.pem
+
+
+     -  Generate a Self-Signed Certificate
+	.. code-block::
+	   openssl rsa -in client_privatekey -outform PEM -out client_privatekey.pem
+
+     - Server Self-Signed Certificate
+       .. code-block::
+	  openssl req -new -x509 -key server_privatekey.pem -out server.cert -days 365
+
+	  openssl req -new -x509 -key client_privatekey.pem -out client.cert -days 365
+
+
+     - Server side code
+       
+	  
+	openssl genrsa -out rootCA.key 4096
+
+	openssl req -x509 -new -nodes -key rootCA.key -sha256 -days 1825 -out rootCA.pem
+
+	openssl genrsa -out server.key 2048
+	openssl req -new -key server.key -out server.csr
+	openssl req -new -key server.key -out server.csr -config openssl.cnf
+	openssl x509 -req -in server.csr -CA rootCA.pem -CAkey rootCA.key -CAcreateserial -out server.crt -days 825 -sha256
+	openssl genrsa -out client.key 2048
+	openssl req -new -key client.key -out client.csr -config openssl.cnf
+	openssl x509 -req -in client.csr -CA rootCA.pem -CAkey rootCA.key -CAcreateserial -out client.crt -days 825 -sha265
+	
+#. rpyc secure over ssl using self certificates
+   - Generate the Root CA's Private Key and root-ca-certificate
+     .. code-block::
+	openssl genrsa -out rootCA.key 4096
+
+	openssl req -x509 -new -nodes -key rootCA.key -sha256 -days 1825 -out rootCA.pem
+
+   - Generate the Server's Private Key and certificate-signing-request
+     .. code-block::
+	openssl genrsa -out server.key 2048
+	openssl req -new -key server.key -out server.csr
+	openssl req -new -key server.key -out server.csr -config openssl.cnf
+
+   - Sign the certificate
+     .. code-block::
+	openssl x509 -req -in server.csr -CA rootCA.pem -CAkey rootCA.key -CAcreateserial -out server.crt -days 825 -sha256
+
+   - Create client private key and csr
+
+     .. code-block::
+	openssl genrsa -out client.key 2048
+	openssl req -new -key client.key -out client.csr -config openssl.cnf
+
+     - sign the certificate
+       .. code-block::
+	  openssl x509 -req -in client.csr -CA rootCA.pem -CAkey rootCA.key -CAcreateserial -out client.crt -days 825 -sha265

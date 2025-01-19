@@ -6,6 +6,7 @@ from doit.tools import run_once
 from pathlib import Path
 import os
 import tempfile
+from doit_extntools import RemoteFilesDep, RemoteCommandError
 import logging
 logger = logging.getLogger(__name__)
 
@@ -42,11 +43,11 @@ def ship_file(fabric_conn,
 
 def fetch_file(fabric_conn,
                file_to_fetch,
-               fetch_dir
+               target_path
               ):
     try:
-        local_fp = str(Path(fetch_dir)/Path(file_to_fetch).name)
-        fabric_conn.get(file_to_fetch, local_fp)
+        #local_fp = str(Path(fetch_dir)/Path(file_to_fetch).name)
+        fabric_conn.get(str(file_to_fetch), str(target_path))
         
     except Exception as e:
         logger.debug(f"FILE-Fetch-FAILURE: {file_to_fetch} due to {e}")
@@ -55,7 +56,7 @@ def fetch_file(fabric_conn,
         
     pass
 
-def teardown_file(fabric_conn, fileconfig):
+def teardown_shipfile(fabric_conn, fileconfig):
     if fileconfig.clean_local:
         print("cleaning up local file")
         fileconfig.file_path.unlink()
@@ -68,6 +69,18 @@ def teardown_file(fabric_conn, fileconfig):
         else:
             logger.debug(f"Failed to delete file: {fileconfig.target_path}")
 
+def teardown_fetchfile(fabric_conn, fileconfig):
+    if fileconfig.clean_local:
+        print("cleaning up local file")
+        fileconfig.target_path.unlink()
+
+    if fileconfig.clean_remote:
+        print("cleaning up remote file")
+        result = fabric_conn.run(f"rm -f {fileconfig.file_path}", warn=True)
+        if result.ok:
+            logger.info(f"File {fileconfig.file_path} deleted successfully.")
+        else:
+            logger.debug(f"Failed to delete file: {fileconfig.file_path}")            
     
 def log_command_exec_status(cmdstr, result, task_label, rtas):
     stdout = result.stdout.strip()
@@ -85,6 +98,7 @@ def log_command_exec_status(cmdstr, result, task_label, rtas):
         logger.error(f"IP Address: {rtas.ipv6} || {task_label} || For command: {cmdstr}")
         logger.error(stderr)
         rtas.remote_task_results[task_label] = ("Error", stderr)
+
         
         #return False
         raise RemoteCommandError("remote command execution failed", result.return_code, stderr)
@@ -102,12 +116,7 @@ class RTASExecutionError(Exception):
 
 
 
-class RemoteCommandError(Exception):
-    """Custom exception for remote command failures."""
-    def __init__(self, message, exit_code=None, stderr=None):
-        super().__init__(message)
-        self.exit_code = exit_code
-        self.stderr = stderr
+
 
 import os
 
