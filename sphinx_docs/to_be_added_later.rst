@@ -73,7 +73,6 @@
    - Generate the Server's Private Key and certificate-signing-request
      .. code-block::
 	openssl genrsa -out server.key 2048
-	openssl req -new -key server.key -out server.csr
 	openssl req -new -key server.key -out server.csr -config openssl.cnf
 
    - Sign the certificate
@@ -88,4 +87,38 @@
 
      - sign the certificate
        .. code-block::
-	  openssl x509 -req -in client.csr -CA rootCA.pem -CAkey rootCA.key -CAcreateserial -out client.crt -days 825 -sha265
+	  openssl x509 -req -in client.csr -CA rootCA.pem -CAkey rootCA.key -CAcreateserial -out client.crt -days 825 -sha256
+
+
+#. register the certs with the os and set
+   sudo cp rootCA.pem /usr/local/share/ca-certificates/rootCA.crt
+
+   sudo update-ca-certificates
+   .. code-block::
+      (venv) adming@raspberrypi:~/deploy_ojstack $ sudo ls -l /etc/ssl/certs | grep rootCA
+      lrwxrwxrwx 1 root root     10 Jan 19 17:42 2521e240.0 -> rootCA.pem
+      lrwxrwxrwx 1 root root     43 Jan 19 17:42 rootCA.pem -> /usr/local/share/ca-certificates/rootCA.crt
+
+pip-system-certs
+
+#. Big bug: for some reason my server.crt is self.signed :(
+   - how to verify if your server.crt is self signed
+     .. code-block::
+	openssl verify -CAfile server.crt server.crt
+
+	should return ok
+
+	and
+	openssl verify -CAfile rootCA.pem server.crt
+	should return error
+	C = IN, ST = KARNATAKA, L = BENGALURU, O = Monallabs, OU = Cloudworks, CN = monallabs.in
+	error 29 at 1 depth lookup:subject issuer mismatch
+	C = IN, ST = KARNATAKA, L = BENGALURU, O = Monallabs, OU = Cloudworks, CN = monallabs.in
+	error 29 at 1 depth lookup:subject issuer mismatch
+	C = IN, ST = KARNATAKA, L = BENGALURU, O = Monallabs, OU = Cloudworks, CN = monallabs.in
+	error 29 at 1 depth lookup:subject issuer mismatch
+
+   - lets fix it
+     .. code-block::
+	
+	openssl req -new -key server.key -out server.csr -config openssl.cnf
