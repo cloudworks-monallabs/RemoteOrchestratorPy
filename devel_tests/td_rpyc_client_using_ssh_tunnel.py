@@ -31,7 +31,9 @@ class ClientService(rpyc.Service):
         pass
 
     def exposed_file_reader(self, localpath, chunk_size=STREAM_CHUNK):
-        with Path(localpath).open("rb") as lfh:
+        assert isinstance(localpath, Path)
+        
+        with localpath.open("rb") as lfh:
             while True:
                 buf = lfh.read(chunk_size)
                 if not buf:
@@ -53,11 +55,14 @@ with SshMachine("localhost",
                              service=ClientService
                              )
         # conn = rpyc.classic.connect("localhost", port=local_port)
-        localpath = os.path.dirname(os.path.abspath(inspect.getsourcefile(remote_actions)))
+        #localpath = os.path.dirname(os.path.abspath(inspect.getsourcefile(remote_actions)))
+        target_module = remote_actions
+        localpath = absolute_path = Path(os.path.abspath(target_module.__file__))
         remotepath = "/tmp/remote_actions.py"
         
         print (Path(localpath))
-        conn.root.copy_local_file(Path(localpath)/"remote_actions.py", remotepath)
+        conn.root.upload_module(localpath, target_module.__name__)
+        #conn.root.copy_local_file(Path(localpath)/"remote_actions.py", remotepath)
          # #
          # rpyc.utils.classic.upload(conn, Path(localpath)/"remote_actions.py", "/tmp/remote_actions.py")
         #conn = rpyc.classic.connect("localhost", port=local_port)
