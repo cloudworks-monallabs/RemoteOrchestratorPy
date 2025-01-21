@@ -3,6 +3,7 @@ from plumbum import SshMachine
 import os
 import inspect
 from pathlib import Path
+from rpyc.core.consts import STREAM_CHUNK
 service_port = 7777
 # conn = rpyc.connect("192.168.0.102",
 #                                          service_port)
@@ -28,7 +29,14 @@ class ClientService(rpyc.Service):
     def exposed_read_file(self):
         print("Hurray ==>  exposed_read_file called " )
         pass
-    
+
+    def exposed_file_reader(self, localpath, chunk_size=STREAM_CHUNK):
+        with Path(localpath).open("rb") as lfh:
+            while True:
+                buf = lfh.read(chunk_size)
+                if not buf:
+                    break
+                yield buf
 
         
 with SshMachine("localhost",
@@ -49,7 +57,7 @@ with SshMachine("localhost",
         remotepath = "/tmp/remote_actions.py"
         
         print (Path(localpath))
-        conn.root.client_callback()
+        conn.root.copy_local_file(Path(localpath)/"remote_actions.py", remotepath)
          # #
          # rpyc.utils.classic.upload(conn, Path(localpath)/"remote_actions.py", "/tmp/remote_actions.py")
         #conn = rpyc.classic.connect("localhost", port=local_port)

@@ -122,3 +122,11 @@ pip-system-certs
      .. code-block::
 	
 	openssl req -new -key server.key -out server.csr -config openssl.cnf
+#. no need for ssl authentication
+
+#. using ssh pluvblum
+   - TODO: usee ssh-agent instead of providing private key into your code
+     .. code-block::
+	eval $(ssh-agent)
+	ssh-add ~/.ssh/id_rsa
+   - 

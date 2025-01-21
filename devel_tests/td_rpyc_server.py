@@ -1,3 +1,4 @@
+from pathlib import Path
 import rpyc
 import sys
 from rpyc.utils.authenticators import SSLAuthenticator
@@ -19,9 +20,14 @@ class ExecutionService(rpyc.Service):
         # (to finalize the service, if needed)
         pass
 
-    def exposed_client_callback(self):
-        # callback for the client 
-        self.conn.root.read_file()
+
+
+    def exposed_copy_local_file(self, localpath, remotepath):
+        # ask client to open file and read out the contents in chunk
+        with Path(remotepath).open("wb") as fh:
+            for buf in self.conn.root.file_reader(localpath):
+                fh.write(buf)
+            
         pass
     
     def exposed_load_module(self, module_string):
