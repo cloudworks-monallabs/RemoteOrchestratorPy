@@ -62,6 +62,7 @@ with SshMachine("localhost",
         
         print (Path(localpath))
         conn.root.upload_module(localpath, target_module.__name__)
+        conn.close()
         #conn.root.copy_local_file(Path(localpath)/"remote_actions.py", remotepath)
          # #
          # rpyc.utils.classic.upload(conn, Path(localpath)/"remote_actions.py", "/tmp/remote_actions.py")

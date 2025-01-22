@@ -130,3 +130,7 @@ pip-system-certs
 	eval $(ssh-agent)
 	ssh-add ~/.ssh/id_rsa
    - 
+#. you can list using
+   doit  -f  /home/kabira/Development/cloudworks-monallabs/RemoteOrchestratorPy/devel_tests/devel_setup_remote.py --dir .  list --all --deps
+#. Get task info
+   -  doit  -f  /home/kabira/Development/cloudworks-monallabs/RemoteOrchestratorPy/devel_tests/devel_setup_remote.py --dir . info setup_remote:192.168.0.102:inner:_leaf_final_

@@ -163,6 +163,7 @@ class RemoteTaskActionSequence:
         # a flag to abort execution of remaing tasks
         self.task_failed_abort_execution = False
         self.task_failed_exception = None
+        self.rpyc_conn = None
         make_active = True
         for user_name, fabric_conn in args:
             self.add_ssh_user(user_name, fabric_conn, make_active=make_active)
@@ -250,41 +251,43 @@ class RemoteTaskActionSequence:
         if 'task_dep' in kwargs:
             self.task_ship_files_prefix['task_dep'].append(kwargs.get('task_dep')
                                                            )
-            
-        
+
+        def target_path(fileconfig, dest_dir=dest_dir):
+            if fileconfig.target_path:
+                return  fileconfig.target_path
+
+            file_to_ship = fileconfig.file_path
+            return dest_dir/Path(file_to_ship).name
+
         def ship_task_iter():
             for fileconfig in fileconfigs:
-                file_to_ship = fileconfig.file_path
-                file_basename = Path(file_to_ship).name
-                target_path = dest_dir/Path(file_to_ship).name
-                if fileconfig.target_path:
-                    target_path = fileconfig.target_path
-
+                print("create task for ", fileconfig, " ", fileconfig.file_path)
+                file_basename = fileconfig.file_path.name
                 trec = {
                     'basename': self.basename,
 
-                    'name': f"ship_file:{fileconfig.target_path}",
+                    'name': f"ship_file:{target_path(fileconfig)}",
                     'actions': [(ship_file, [self.active_conn,
-                                             file_to_ship,
-                                             target_path
+                                             fileconfig.file_path,
+                                             target_path(fileconfig)
                                              ])
 
                                 ],
                     'uptodate': [(check_remote_files_exists,
                                   [self.active_conn,
-                                   [target_path]
+                                   [target_path(fileconfig)]
                                    ]
                                   )
                                     
                                  ],
-                    'file_dep': [file_to_ship],
+                    'file_dep': [fileconfig.file_path],
                     #'doc': f"{self.suffix_task_label}: ship local file to remote: {file_to_ship}",
                     'task_dep': [task_label_ship_files_prefix]
 
                     }
 
                 if fileconfig.clean_local or fileconfig.clean_remote:
-                    trec['teardown'] = [(teardown_shipfile, [self.active_conn, fileconfig])]
+                    trec['teardown'] = [(teardown_shipfile, [self.active_conn, fileconfig, target_path])]
 
                 yield trec
 
@@ -299,7 +302,7 @@ class RemoteTaskActionSequence:
         # create a group task for all the shipped files
         trec = {'basename': self.basename,
                 'name': f"ship_files",
-                'task_dep': [f"{self.basename}:ship_file:{fileconfig.target_path}" for fileconfig in fileconfigs
+                'task_dep': [f"{self.basename}:ship_file:{target_path(fileconfig)}" for fileconfig in fileconfigs
                              ],
                 'actions': None,
                 #'doc': f"{self.task_label}: group task for file ship to remote"
@@ -488,30 +491,34 @@ class RemoteTaskActionSequence:
             self.task_fetch_files_prefix['task_dep'].extend(self.task_dep)
             self.task_dep = []
 
+        def target_path(fileconfig, local_dir=local_dir):
+            if fileconfig.target_path:
+                target_path = fileconfig.target_path
+                    
+            return local_dir/Path(fileconfig.file_path).name
+            
         def fetch_task_iter():
             for fileconfig in fileconfigs:
-                file_to_fetch = fileconfig.file_path
-                file_basename = Path(file_to_fetch).name
-                target_path = local_dir/Path(file_to_fetch).name
-                if fileconfig.target_path:
-                    target_path = fileconfig.target_path
-                    
+                file_basename = fileconfig.file_path.name
+                                
                 trec = {
                     'basename': self.basename,
 
-                    'name': f"fetch_file:{fileconfig.target_path}",
+                    'name': f"fetch_file:{fileconfig.file_path}",
                     'actions': [(fetch_file, [self.active_conn,
-                                              file_to_fetch,
-                                              target_path
+                                              fileconfig.file_path,
+                                              target_path(fileconfig)
                                              ])
 
                                 ],
-                    'targets': [target_path
+                    'targets': [target_path(fileconfig)
                                 ],
                     
 
+
+
                     'uptodate': [RemoteFilesDep(self.active_conn,
-                                                [file_to_fetch],
+                                                [fileconfig.file_path],
                                                 os_type=self.os_type
                                                 )
                                  ],
@@ -521,7 +528,7 @@ class RemoteTaskActionSequence:
 
                 if fileconfig.clean_local or fileconfig.clean_remote:
                     trec['teardown'] = [(teardown_fetchfile,
-                                         [self.active_conn, fileconfig]
+                                         [self.active_conn, fileconfig, target_path]
                                          )
                                         ]
                 yield trec
@@ -531,7 +538,7 @@ class RemoteTaskActionSequence:
         # to add as depency to local_step_post
         trec = {'basename': self.basename,
                     'name': f"fetch_files",
-                    'task_dep': [f"{self.basename}:fetch_file:{Path(fileconfig.target_path)}" for fileconfig in fileconfigs
+                    'task_dep': [f"{self.basename}:fetch_file:{fileconfig.file_path}" for fileconfig in fileconfigs
                                  
                                  ],
                     'actions': None,
@@ -649,7 +656,7 @@ class RemoteTaskActionSequence:
             yield self.task_local_step_post
 
         trec = {'basename': self.basename,
-                'name': "leaf_final_",
+                'name': "_leaf_final_",
                 'task_dep': [self.final_task
                                  
                              ],
@@ -686,7 +693,7 @@ class RemoteTaskActionSequence:
         # all the rtas (super and sub) defined under this rtas
         # will be used as dependency for group task with
         # basename (without the ipv6)
-        self.rtas_taskseq_labels = [f"{self.basename_super}:leaf_final_"]
+        self.rtas_taskseq_labels = [f"{self.basename_super}:_leaf_final_"]
 
 
         # all first task in the rtas
@@ -712,10 +719,10 @@ class RemoteTaskActionSequence:
         self.task_fetch_files_iter = None
         self.task_local_step_post = None
         # these will be added as task_dep to the final group task
-        self.rtas_taskseq_labels.append(f"{self.basename}::leaf_final_")
+        self.rtas_taskseq_labels.append(f"{self.basename}:_leaf_final_")
         # all sub-rtas has dependency to the teardown task of
         # the super task
-        self.task_dep = [f"{self.basename_super}::leaf_final"]
+        self.task_dep = [f"{self.basename_super}:_leaf_final_"]
         pass
 
 

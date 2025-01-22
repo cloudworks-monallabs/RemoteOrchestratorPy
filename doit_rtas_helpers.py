@@ -7,7 +7,13 @@ from pathlib import Path
 import os
 import tempfile
 from doit_extntools import RemoteFilesDep, RemoteCommandError
+import rpyc
+from rpyc.core.consts import STREAM_CHUNK
+from plumbum import SshMachine
+
+
 import logging
+
 logger = logging.getLogger(__name__)
 
 from typing import NamedTuple
@@ -19,7 +25,8 @@ class FileConfig(NamedTuple):
     target_path: str = None
 
     
-    
+
+        
 def get_ref_name(trec):
     """
     """
@@ -33,6 +40,7 @@ def ship_file(fabric_conn,
     """
     dest_path: a Path like expression
     """
+
     try:
         fabric_conn.put(file_to_ship, str(dest_path))
     except Exception as e:
@@ -56,18 +64,17 @@ def fetch_file(fabric_conn,
         
     pass
 
-def teardown_shipfile(fabric_conn, fileconfig):
+def teardown_shipfile(fabric_conn, fileconfig, target_path):
     if fileconfig.clean_local:
-        print("cleaning up local file")
         fileconfig.file_path.unlink()
 
     if fileconfig.clean_remote:
         print("cleaning up remote file")
-        result = fabric_conn.run(f"rm -f {fileconfig.target_path}", warn=True)
+        result = fabric_conn.run(f"rm -f {target_path(fileconfig)}", warn=True)
         if result.ok:
-            logger.info(f"File {fileconfig.target_path} deleted successfully.")
+            logger.info(f"File {target_path(fileconfig)} deleted successfully.")
         else:
-            logger.debug(f"Failed to delete file: {fileconfig.target_path}")
+            logger.debug(f"Failed to delete file: {target_path(fileconfig)}")
 
 def teardown_fetchfile(fabric_conn, fileconfig):
     if fileconfig.clean_local:
@@ -105,8 +112,37 @@ def log_command_exec_status(cmdstr, result, task_label, rtas):
             
 
  
-        
+# client service but         
+class ClientService(rpyc.Service):
+    def __init__(self):
+        pass
 
+    def on_connect(self, conn):
+        # code that runs when a connection is created
+        # (to init the service, if needed)
+        print("server connected")
+        pass
+
+    def on_disconnect(self, conn):
+        print("server disconnected")
+        # code that runs after the connection has already closed
+        # (to finalize the service, if needed)
+        pass
+
+    def exposed_read_file(self):
+        print("Hurray ==>  exposed_read_file called " )
+        pass
+
+    def exposed_file_reader(self, localpath, chunk_size=STREAM_CHUNK):
+        assert isinstance(localpath, Path)
+        
+        with localpath.open("rb") as lfh:
+            while True:
+                buf = lfh.read(chunk_size)
+                if not buf:
+                    break
+                yield buf
+                
 
 class RTASExecutionError(Exception):
     """Custom exception for task execution failures."""
@@ -121,14 +157,36 @@ class RTASExecutionError(Exception):
 import os
 
 # Get the directory of the current file
-current_file_directory = os.path.dirname(os.path.abspath(__file__))
+module_dir = os.path.dirname(os.path.abspath(__file__))
 service_port = 7777
-def setup_remote(rtas, remote_workdir, remote_upload_file):
+
+def setup_remote(rtas,
+                      remote_workdir,
+                      remote_action_module,
+                      remote_ssh_private_key,
+                      local_port = 18356,
+                      
+                      ):
     """
-    remote_upload_file: user provided pycode file that needs to be upload to remote server;
-    its functions are going to be called during execution
+    remote_action_module: to be uploaded remotely
+    remote_ssh_private_key: for passwordless connection between rpyc server (running on remote machine) and
+                           local machine
+    
     
     """
+
+    remote_task_append = rtas.set_task_remote_step_iter()
+    remote_task_append(f"mkdir {remote_workdir}", "create_workdir", uptodate=[run_once]
+        )
+    remote_task_append(f"cd {remote_workdir}; python3 -m venv venv", "create_python_venv", uptodate=[run_once]
+        )
+    # install rpyc
+    remote_task_append(f"cd {remote_workdir}; . ./venv/bin/activate; pip install rpyc", "install_rpyc", uptodate=[run_once]
+                       )
+
+    yield from rtas
+    
+    rtas.set_new_subtask_seq(id_args=["inner"])
 
     launch_service_str = f"""
 #!/bin/bash
@@ -138,7 +196,7 @@ cd {remote_workdir}
 . ./venv/bin/activate; 
 
 # Run the command and check for errors
-nohup python3 /tmp/remote_execution_service.py {service_port} > /tmp/run.log 2>&1 & 
+nohup python3 remote_execution_service.py {service_port} > remote_execution_service.log 2>&1 & 
 pid=$!
 
 # Wait briefly to allow any immediate errors to surface
@@ -160,28 +218,20 @@ exit 0
         launch_service_fh.flush()
 
     
-    # Example usage
-    config = FileConfig(filename="example.txt")
-    print(config.filename)  # Outputs: example.txt
-
     
     # put a teardown task to remove the file
-    rtas.set_task_ship_files_iter([FileConfig(f"{current_file_directory}/remote_execution_service.py", False, True),
-                                   FileConfig(launch_service_fh.name, True, True)
+    rtas.set_task_ship_files_iter([FileConfig(Path(f"{module_dir}/remote_execution_service.py"), False, False),
+                                   FileConfig(Path(launch_service_fh.name), False, False)
                                    ],
-                                  "/tmp"
+                                  Path(remote_workdir)
                                   )
+    # launch_service_fh<-- named temporary files
+    # launch_service_fh.name<-- the temporary file path
+    #.Path(launch_service_fh.name).name <-- basename 
     launch_service_basename = Path(launch_service_fh.name).name
     remote_task_append = rtas.set_task_remote_step_iter()
 
-    remote_task_append(f"mkdir {remote_workdir}", "create_workdir", uptodate=[run_once]
-        )
-    remote_task_append(f"cd {remote_workdir}; python3 -m venv venv", "create_python_venv", uptodate=[run_once]
-        )
 
-    # install rpyc
-    remote_task_append(f"cd {remote_workdir}; . ./venv/bin/activate; pip install rpyc", "install_rpyc", uptodate=[run_once]
-        )
 
     # start server
     #command = f"nohup python3 /tmp/remote_execution_service.py {service_port} > /tmp/run.log 2>&1 &  echo $!"
@@ -190,7 +240,37 @@ exit 0
         task_label = f"{rtas.basename}:remote_step:launch_rpyc"
         print("result of launch = ", rtas.remote_task_results[task_label])
         print("now teardown the remote RPyC server")
+        if rtas.rpyc_conn:
+            
+            rtas.rpyc_conn.close()
     # remote_task_append(f"cd {remote_workdir}; . ./venv/bin/activate; {command}", "launch_rpyc", teardown=[(teardown, [rtas])]
     #     )
-    remote_task_append(f"cd {remote_workdir}; sh /tmp/{launch_service_basename}", "launch_rpyc", teardown=[(teardown, [rtas])]
+    remote_task_append(f"cd {remote_workdir}; sh {launch_service_basename}", "launch_rpyc", teardown=[(teardown, [rtas])]
                        )
+
+    # connect to remote rpyc and upload remote module
+    def local_step_post(rtas):
+        try: 
+            with SshMachine(rtas.ipv6,
+                            user = "adming",
+                            keyfile="/home/adming/.ssh/id_rsa"
+                            ) as rem:
+                with rem.tunnel(local_port, service_port):
+                    conn = rpyc.connect("localhost",
+                                        local_port,
+                                        service=ClientService
+                                        )
+                    localpath = Path(os.path.abspath(remote_action_module.__file__))
+                    conn.root.upload_module(localpath, remote_action_module.__name__)
+                    rtas.rpyc_conn  = conn
+                    pass
+        except Exception as e:
+            print ("tunneling failed", e)
+        return True
+    rtas.set_task_local_step_post(local_step_post,
+                                  rtas,
+                                  #uptodate=[run_once]
+                                  )
+
+    
+    yield from rtas

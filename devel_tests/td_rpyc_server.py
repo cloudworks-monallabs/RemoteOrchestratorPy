@@ -52,7 +52,7 @@ class ExecutionService(rpyc.Service):
 
 
 if __name__ == "__main__":
-    from rpyc.utils.server import ThreadedServer
+    from rpyc.utils.server import ThreadedServer, OneShotServer
     # authenticator = SSLAuthenticator(
     #     keyfile="server.key", 
     #     certfile="server.crt", 
@@ -60,7 +60,11 @@ if __name__ == "__main__":
     #     ca_certs="/home/adming/DrivingRange/CloudWorks/deployment_service/rootCA.pem"
     # )
     # Every connection will get its own ExecutionService instance
-    server_handle = ThreadedServer(ExecutionService, port=int(sys.argv[1]),
+    
+    # server_handle = ThreadedServer(ExecutionService, port=int(sys.argv[1]),
+    #                                #authenticator=authenticator
+    #                                )
+    server_handle = OneShotServer(ExecutionService, port=int(sys.argv[1]),
                                    #authenticator=authenticator
                                    )
 
