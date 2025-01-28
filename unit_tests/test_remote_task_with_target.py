@@ -1,9 +1,9 @@
-from doit_rtas import (RemoteTaskActionSequence,
-                       doit_taskify,
-                       get_leaf_task_label,
-                       setup_remote as rtas_setup_remote
-                       )
-from patchwork.files import exists
+from RemoteOrchestratorPy import (RemoteTaskActionSequence,
+                                  doit_taskify,
+                                  get_leaf_task_label,
+                                  FileConfig,
+                                  setup_remote_debian 
+                                  )
 import sys
 from fabric import Connection, Config
 from pathlib import Path
@@ -13,18 +13,11 @@ import logging
 
 # Configure logging
 logging.basicConfig(
-    filename='app.log',        # Log file name
-    level=logging.INFO,       # Minimum log level to capture
+    filename='unit_test.log',        # Log file name
+    level=logging.DEBUG,       # Minimum log level to capture
     format='%(asctime)s - %(levelname)s - %(message)s',  # Log format
     filemode='a'               # File mode: 'a' for append, 'w' for overwrite
 )
-
-# Test the logger
-logging.debug('This is a debug message')
-logging.info('This is an info message')
-logging.warning('This is a warning message')
-logging.error('This is an error message')
-logging.critical('This is a critical message')
 
 
 
@@ -47,10 +40,6 @@ fabric_config = Config(overrides={
     },
 })
 
-fabric_conn_root = Connection(host=ipv6,
-                              user="root",
-                              config=fabric_config
-                         )
 
 fabric_conn_adming = Connection(host=ipv6,
                                 user="adming",
@@ -59,29 +48,48 @@ fabric_conn_adming = Connection(host=ipv6,
 
 rtas = RemoteTaskActionSequence(ipv6, ("adming", fabric_conn_adming),
                                 
-                                ("root", fabric_conn_root)
+                                os_type="linux"
                                 )
 rtas.set_active_user("adming")
 
 all_rtas = [rtas]
 
-remote_workdir = "/home/adming/deploy_ojstack"
-
 import remote_actions
+
+# debian linux setup remote
+
+remote_workdir = "/home/adming/deployment_service"    
+
 @doit_taskify(all_rtas)
 def setup_remote(rtas):
-    yield from rtas_setup_remote(rtas, remote_workdir, remote_actions, "/home/adming/.ssh/id_rsa")
- 
+    yield from setup_remote_debian(rtas, "/home/adming/DrivingRange/CloudWorks/deployment_service",
+                                 remote_workdir, remote_actions, "/home/adming/.ssh/id_rsa")
 
+
+# complete setup_remote task before execution of this task    
+@doit_taskify(all_rtas, task_dep=[get_leaf_task_label(setup_remote)])
+def remote_with_target(rtas):
+    remote_task_append = rtas.set_task_remote_step_iter()
+    #  argument order
+    #  the tuple for remote func execution command
+    #  task label
+    #  task kwargs
+    remote_task_append(("wget_url", [f"https://cdn.openbsd.org/pub/OpenBSD/snapshots/arm64/man76.tgz"],
+                        {}
+
+                        ), "download_tgz", 
+                       targets=[f"{remote_workdir}/man76.tgz"]
+                       )
+        
     
-
+    yield from rtas
     
 
 
 #print("task_label = ",     TASKWITHEXCEPTION.__leaf_final_task_label__)
 
 
-def task_say_hello():
+def task_final():
     def do_action():
         print("hellow")
 
@@ -89,8 +97,11 @@ def task_say_hello():
         print("in teardown")
         
     return { 'actions': [do_action],
-             'task_dep': [get_leaf_task_label(setup_remote)],
-             #'task_dep': ["setup_remote_leaf_final_"],
+             #'task_dep': [get_leaf_task_label(TASKWITHEXCEPTION)]
+             'task_dep': [#"TASKSHIPFILES_leaf_final_"
+                 #get_leaf_task_label(TASKSFETCHFILES)
+                 get_leaf_task_label(remote_with_target)
+                          ],
              'teardown': [teardown]
 
         }
@@ -104,16 +115,13 @@ class ErrorReporter(ConsoleReporter):
 DOIT_CONFIG = {
     "verbosity": 2,
     'reporter': ErrorReporter,
-    'default_tasks' :  ["say_hello",
+    'default_tasks' :  ["final",
                         
-                        ],
-    #'continue':True
+                        ]
     
     
     }
-from doit_api import doit_config
 
-doit_config(continue_=True)
 import os
 from doit.cmd_base import ModuleTaskLoader
 from doit.doit_cmd import DoitMain
@@ -122,8 +130,7 @@ os.chdir("/home/adming/DrivingRange/CloudWorks/deployment_service")
 DoitMain(ModuleTaskLoader(sys.modules[__name__])).run(sys.argv[1:])
 
 
-# list all tasks
-#doit  -f  /home/kabira/Development/cloudworks-monallabs/RemoteOrchestratorPy/devel_tests/devel_setup_remote.py --dir .  list --all --deps
 
-#. Get taks inof
-#. doit  -f  /home/kabira/Development/cloudworks-monallabs/RemoteOrchestratorPy/devel_tests/devel_setup_remote.py --dir . info setup_remote:192.168.0.102:inner:_leaf_final_
+"""
+- test refetch w
+"""

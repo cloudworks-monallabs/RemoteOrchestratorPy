@@ -15,7 +15,6 @@ from .doit_rtas_helpers import (log_command_exec_status,
                                 ship_file,
                                 fetch_file,
                                 get_ref_name,
-                                setup_remote,
                                 FileConfig,
                                 teardown_shipfile,
                                 teardown_fetchfile
@@ -169,13 +168,13 @@ def action_wrapper(rtas, action_func):
             logger.info(f"RTAS-skip-task: {rtas.ipv6} task_failed_abort_execution is True")
             return False
         try:
-            logger.info("What nonsense")
+            logger.info(f"running action {action_func}")
             return action_func(*args, **kwargs)
             
         except Exception as e:
             rtas.task_failed_abort_execution = True
             rtas.task_failed_exception = e
-            logger.info(f"RTAS-abort-task: {rtas.ipv6} raised exception {e}")
+            logger.info(f"RTAS-abort-task: {action_func}: {rtas.ipv6} raised exception {e}")
             return False
         return False
 

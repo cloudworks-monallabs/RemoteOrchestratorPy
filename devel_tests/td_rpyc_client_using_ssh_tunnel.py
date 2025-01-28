@@ -58,10 +58,8 @@ with SshMachine("localhost",
         #localpath = os.path.dirname(os.path.abspath(inspect.getsourcefile(remote_actions)))
         target_module = remote_actions
         localpath = absolute_path = Path(os.path.abspath(target_module.__file__))
-        remotepath = "/tmp/remote_actions.py"
-        
-        print (Path(localpath))
         conn.root.upload_module(localpath, target_module.__name__)
+        result = conn.root.exec_action("remote_actions", "wget_url", f"https://cdn.openbsd.org/pub/OpenBSD/snapshots/arm64/man76.tgz")
         conn.close()
         #conn.root.copy_local_file(Path(localpath)/"remote_actions.py", remotepath)
          # #

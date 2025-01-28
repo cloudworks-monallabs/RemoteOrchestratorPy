@@ -10,4 +10,6 @@ conn = rpyc.ssl_connect("192.168.0.185",
                     certfile="client.crt",  # Client's signed certificate
                     )
 conn.root.load_module("alpha_beta")
+conn.root.exec_action("remote_actions", "wget", "url")
+
 #conn.root.exec_action("remote_actions", "dummy_utils", )

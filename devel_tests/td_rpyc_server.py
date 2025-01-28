@@ -48,7 +48,28 @@ class ExecutionService(rpyc.Service):
     
     def exposed_load_module(self, module_string):
         print ("load the module")
+    def exposed_exec_action(self, module_name, action_func, *args, **kwargs):
+        if module_name not in sys.modules:
+            raise ValueError(f"Module '{module_name}' is not loaded.")
 
+        module = sys.modules[module_name]
+
+        # Check if the function exists in the module
+        if not hasattr(module, action_func):
+            raise AttributeError(f"Function '{action_func}' not found in module '{module_name}'.")
+
+        # Retrieve the function
+        func = getattr(module, action_func)
+
+        # Ensure it's callable
+        if not callable(func):
+            raise TypeError(f"'{action_func}' in module '{module_name}' is not callable.")
+
+        # Call the function with provided arguments
+        try: 
+            return func(*args, **kwargs)
+        except Exception as e:
+            raise e
 
 
 if __name__ == "__main__":

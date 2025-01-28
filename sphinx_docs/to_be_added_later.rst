@@ -24,7 +24,7 @@
      - a running task is aborted due to exception
        
 #. pip install
-   rpyc doit-api
+   rpyc doit-api wget 
    
 #. rpyc secure over ssl
    - server : where RpyC server is created
@@ -134,3 +134,29 @@ pip-system-certs
    doit  -f  /home/kabira/Development/cloudworks-monallabs/RemoteOrchestratorPy/devel_tests/devel_setup_remote.py --dir .  list --all --deps
 #. Get task info
    -  doit  -f  /home/kabira/Development/cloudworks-monallabs/RemoteOrchestratorPy/devel_tests/devel_setup_remote.py --dir . info setup_remote:192.168.0.102:inner:_leaf_final_
+
+
+#. doit_taskify parameters
+   - leaf_barrier_task
+     - if True, then a non-action task as leaf is added
+       - this implies that all RTAS for all ips will be completed before next task is taken up
+     - if False then no leaf task is added
+       - make sure that the task is chained together with next task sequence
+   - task_dep_by_ip
+     - place task dependency on the enter tasknode of the rtas 
+   - task_dep
+     - place task dependency on the enter of allroot tasknode
+
+#. List all tasks even the group-node task
+    python3  /home/kabira/Development/cloudworks-monallabs/deployment-service/devel/test_drive.py list --all
+
+#. one basic gotcha is not including task in the task loaded module
+   - for e.g. task are loaded from doit_task module
+     - if there is a module bootstrap_openbsd
+       - then you need to import it in doit_task module
+       
+#. Another gotcha
+   - not adding contine option for doit
+     from doit_api import doit_config
+
+     doit_config(continue_=True)
