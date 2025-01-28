@@ -9,7 +9,7 @@ import tempfile
 from doit_extntools import RemoteFilesDep, RemoteCommandError
 
 from plumbum import SshMachine
-from .setup_remote import ClientService, service_port, FileConfig
+from .setup_remote import ClientService, service_port, FileConfig, module_dir
 
 import logging
 
@@ -81,6 +81,17 @@ def teardown_fetchfile(fabric_conn, fileconfig):
             logger.info(f"File {fileconfig.file_path} deleted successfully.")
         else:
             logger.debug(f"Failed to delete file: {fileconfig.file_path}")            
+
+def log_command_exec_status_rpyc(cmdstr, result, task_label, rtas):
+    logger = logging.getLogger(__name__)
+    # False indicates the task generally failed
+    
+    logger.info(f"IP Address: {rtas.ipv6} || {task_label} || For command: {cmdstr}")
+    logger.info(result)
+    rtas.remote_task_results[task_label] = ("Success", result)
+    return True
+
+
     
 def log_command_exec_status(cmdstr, result, task_label, rtas):
     stdout = result.stdout.strip()
@@ -118,10 +129,6 @@ class RTASExecutionError(Exception):
 
 
 
-import os
-
-# Get the directory of the current file
-module_dir = os.path.dirname(os.path.abspath(__file__))
 
 
 def setup_remote(rtas,

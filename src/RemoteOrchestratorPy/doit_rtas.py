@@ -10,15 +10,15 @@ Things to keep in mind:
 import traceback
 import sys
 import functools
-from doit_rtas_helpers import (log_command_exec_status,
-                               ship_file,
-                               fetch_file,
-                               get_ref_name,
-                               setup_remote,
-                               FileConfig,
-                               teardown_shipfile,
-                               teardown_fetchfile
-                               
+from .doit_rtas_helpers import (log_command_exec_status,
+                                log_command_exec_status_rpyc, 
+                                ship_file,
+                                fetch_file,
+                                get_ref_name,
+                                setup_remote,
+                                FileConfig,
+                                teardown_shipfile,
+                                teardown_fetchfile
                                )
 
 from patchwork.files import exists
@@ -114,13 +114,43 @@ def remote_exec_cmd(rtas,  task_label, *args):
     for cmdstr in args:
 
         result = rtas.active_conn.run(cmdstr, hide=True)
-        rtas.remote_task_results[task_label] = result
+        # TODO: only the last command results are  kept 
         status = log_command_exec_status(cmdstr,
                                          result,
                                          task_label,
                                          rtas
                                 )
     return status
+
+def remote_exec_func(rtas, task_label, cmdl):
+    #result = "success"
+    try:
+        logger.debug(f"starting remote action: {cmdl}")
+        result = rtas.rpyc_conn.root.exec_action("remote_actions",
+                                                 cmdl[0],
+                                                 *cmdl[1],
+                                                 **cmdl[2]
+                                                  )
+        #result = rtas.rpyc_conn.root.exec_action("remote_actions", "wget_url", f"https://cdn.openbsd.org/pub/OpenBSD/snapshots/arm64/man76.tgz")
+        
+        result = "Downloded"
+        logger.debug(f"result via rpyc = {result}")
+        logger.debug(f"task_label = {task_label}")
+
+        status = log_command_exec_status_rpyc(cmdl[0],
+                                              result,
+                                              task_label,
+                                              rtas
+                                              
+                                              )
+        return status
+    
+    except Exception as e:
+        logger.debug(f"exec_func failed {e}")
+        rtas.remote_task_results[task_label] = ("Failed", str(e))
+        # let action wrapper know that 
+        raise e
+
 
 def check_remote_files_exists(fabric_conn, remote_targets):
     
@@ -139,6 +169,7 @@ def action_wrapper(rtas, action_func):
             logger.info(f"RTAS-skip-task: {rtas.ipv6} task_failed_abort_execution is True")
             return False
         try:
+            logger.info("What nonsense")
             return action_func(*args, **kwargs)
             
         except Exception as e:
@@ -242,7 +273,10 @@ class RemoteTaskActionSequence:
 
         if 'uptodate' in kwargs:
             trec['uptodate'] = kwargs.get('uptodate')
-            
+
+        if 'teardown' in kwargs:
+            trec['teardown'] = kwargs.get('teardown')
+                        
             
 
 
@@ -436,18 +470,24 @@ class RemoteTaskActionSequence:
                 trec = {
                     'basename': self.basename,
                     'name': f"remote_step:{label}",
-                    'actions': [cmd],
+                    'actions': [(action_wrapper(self, remote_exec_func), [self,
+                                                                          f"{self.basename}:remote_step:{label}",
+                                                                          cmd])
+                                ],
                     #'doc': f"{self.suffix_task_label}: remote step : {label}",
                     }
 
 
             trec['uptodate'] = kwargs.get('uptodate', [])
+
             trec['task_dep'] = kwargs.get('task_dep', [])
 
             # local_file_dep is dependency on local file and not on the files on remote destination 
             if 'local_file_dep' in kwargs:
                 trec['file_dep'] = kwargs.get('local_file_dep')
-            trec['teardown'] = kwargs.get('teardown', [])
+
+            if 'teardown' in kwargs:    
+                trec['teardown'] = kwargs.get('teardown')
         
             #target implies remote targets
             if 'targets' in kwargs:
@@ -617,6 +657,10 @@ class RemoteTaskActionSequence:
         else:
             # put a hard dependency to previous task
             pass
+
+        if 'teardown' in kwargs:
+            print("teardown = ", kwargs.get('teardown'))
+            trec['teardown'] = kwargs.get('teardown')
             
         self.task_local_step_post = trec
         self.final_task = f"{self.basename}:local_step_post"
