@@ -1,14 +1,28 @@
+import sys
+import tomllib
 import rpyc
 from plumbum import SshMachine
 import os
 import inspect
 from pathlib import Path
+from addict import Dict
+
 from rpyc.core.consts import STREAM_CHUNK
 service_port = 7777
 # conn = rpyc.connect("192.168.0.102",
 #                                          service_port)
 local_port = 18356
 import remote_actions
+
+def read_config_file(fname):
+    path = Path(fname)  # Create a Path object for the file
+    if not path.exists():
+        raise FileNotFoundError(f"Config file not found: {path}")
+
+    with path.open("rb") as fh:  # Open file in binary mode for tomllib
+        config = tomllib.load(fh)  # Parse the TOML configuration
+
+    return Dict(config)
 
 class ClientService(rpyc.Service):
     def __init__(self):
@@ -40,10 +54,22 @@ class ClientService(rpyc.Service):
                     break
                 yield buf
 
-        
-with SshMachine("localhost",
+target_ip = "159.195.25.136"
+config_path = "./deployment_service.toml"
+
+with open(config_path, "rb") as f:
+   config =  tomllib.load(f)
+   CLUSTER_RESOURCES_DATADIR = Path(config['paths']['cluster_resources_datadir'])
+
+resources_config = read_config_file(f"{CLUSTER_RESOURCES_DATADIR}/resources.toml")
+ssh_private_key_file = f"{CLUSTER_RESOURCES_DATADIR}/{resources_config.resources.admin.auth_private_key_file}"
+
+print (ssh_private_key_file)
+
+
+with SshMachine(target_ip,
                 user = "adming",
-                keyfile="/home/adming/.ssh/id_rsa"
+                keyfile=ssh_private_key_file
                 ) as rem:
 
 
@@ -59,7 +85,7 @@ with SshMachine("localhost",
         target_module = remote_actions
         localpath = absolute_path = Path(os.path.abspath(target_module.__file__))
         conn.root.upload_module(localpath, target_module.__name__)
-        result = conn.root.exec_action("remote_actions", "wget_url", f"https://cdn.openbsd.org/pub/OpenBSD/snapshots/arm64/man76.tgz")
+        result = conn.root.exec_action("remote_actions", "wget_url", f"https://cdn.openbsd.org/pub/OpenBSD/snapshots/arm64/INSTALL.arm64")
         conn.close()
         #conn.root.copy_local_file(Path(localpath)/"remote_actions.py", remotepath)
          # #

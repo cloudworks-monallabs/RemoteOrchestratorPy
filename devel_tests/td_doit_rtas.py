@@ -9,20 +9,27 @@ and local step post will write those to result file for the subtask
 
 """
 
-from doit_rtas import RemoteTaskActionSequence, doit_taskify
+from RemoteOrchestratorPy import (RemoteTaskActionSequence,
+                                  doit_taskify,
+                                  get_leaf_task_label,
+                                  get_dangling_task,
+                                  FileConfig,
+                                  )
+
 import sys
 from fabric import Connection, Config
 from pathlib import Path
 import os
 from doit.tools import run_once
 
-ipv6 = "192.168.0.102"
+ipv6 = "192.168.0.139"
 
 # === create rtas with fabric conn for 2 ssh users root and adming ===
 cluster_resources_datadir="/home/adming/cluster_resources"
 adming_public_key_file = "adming_ssh_rsa_public_key"
+adming_private_key_file = "adming_ssh_rsa_pvt_key"
 connect_kwargs = {
-    "key_filename": f"{cluster_resources_datadir}/{adming_public_key_file}",
+    "key_filename": f"{cluster_resources_datadir}/{adming_private_key_file}",
 }
 fabric_config = Config(overrides={
     'connect_kwargs': connect_kwargs,
@@ -87,12 +94,17 @@ def test_drive_rtas(rtas):
     
     rtas.set_task_ship_files_iter( [
 
-                                     Path(f"/tmp/super_0"),
-                                     Path(f"/tmp/super_1"),
-                                     Path(f"/tmp/super_2")
+                                     FileConfig(Path(f"/tmp/super_0"),
+                                                False,
+                                                False,
+                                                Path("super_0")
+                                                ),
+                                     
+                                     # Path(f"/tmp/super_1"),
+                                     # Path(f"/tmp/super_2")
 
                                      ],
-                                   "/tmp"
+                                   Path("/tmp")
         )
 
     remote_task_append = rtas.set_task_remote_step_iter()
@@ -108,79 +120,79 @@ def test_drive_rtas(rtas):
 
         )
     
-    rtas.set_task_fetch_files_iter(["/tmp/remote_file1",
-                                    "/tmp/remote_file2",
-                                    "/tmp/remote_file3",
+    # rtas.set_task_fetch_files_iter(["/tmp/remote_file1",
+    #                                 "/tmp/remote_file2",
+    #                                 "/tmp/remote_file3",
                                     
-                                    ],
-                                   "/tmp")
+    #                                 ],
+    #                                "/tmp")
                                    
-    rtas.set_task_local_step_post(local_step_post,
-                                  "super",
-                                  "/tmp/remote_file1",
-                                    "/tmp/remote_file2",
-                                    "/tmp/remote_file3",
-                                  targets = [f"/tmp/result_super"
+    # rtas.set_task_local_step_post(local_step_post,
+    #                               "super",
+    #                               "/tmp/remote_file1",
+    #                                 "/tmp/remote_file2",
+    #                                 "/tmp/remote_file3",
+    #                               targets = [f"/tmp/result_super"
 
-                                      ]
-                                  )
-    yield from rtas
+    #                                   ]
+    #                               )
+    # yield from rtas
 
-    # ======================== create subtasks =======================
+    # # ======================== create subtasks =======================
 
-    rtas.set_new_subtask_seq(id_args=["worker_id:0"])
-    task_label = "sub_workder_id:0"
-    rtas.set_task_local_step_pre(local_step_pre,
-                                 task_label,
-                                 targets = [
+    # rtas.set_new_subtask_seq(id_args=["worker_id:0"])
+    # task_label = "sub_workder_id:0"
+    # rtas.set_task_local_step_pre(local_step_pre,
+    #                              task_label,
+    #                              targets = [
 
-                                     Path(f"/tmp/{task_label}_0"),
-                                     Path(f"/tmp/{task_label}_1"),
-                                     Path(f"/tmp/{task_label}_2")
+    #                                  Path(f"/tmp/{task_label}_0"),
+    #                                  Path(f"/tmp/{task_label}_1"),
+    #                                  Path(f"/tmp/{task_label}_2")
 
-                                     ],
-                                 uptodate = [run_once]
+    #                                  ],
+    #                              uptodate = [run_once]
 
-                                 )
+    #                              )
     
-    rtas.set_task_ship_files_iter( [
+    # rtas.set_task_ship_files_iter( [
 
-                                     Path(f"/tmp/{task_label}_0"),
-                                     Path(f"/tmp/{task_label}_1"),
-                                     Path(f"/tmp/{task_label}_2")
+    #                                  Path(f"/tmp/{task_label}_0"),
+    #                                  Path(f"/tmp/{task_label}_1"),
+    #                                  Path(f"/tmp/{task_label}_2")
 
-                                     ],
-                                   "/tmp"
-        )
-    remote_task_append = rtas.set_task_remote_step_iter()
-    remote_task_append("""cd /tmp/; touch remote_file01; echo "hello"> remote_file01; echo "hello"> remote_file02; echo "hello"> remote_file03;""",
-                       "remote_subtask", 
-                              targets = ["/tmp/remote_file01",
-                                         "/tmp/remote_file02",
-                                         "/tmp/remote_file03",
+    #                                  ],
+    #                                "/tmp"
+    #     )
+    # remote_task_append = rtas.set_task_remote_step_iter()
+    # remote_task_append("""cd /tmp/; touch remote_file01; echo "hello"> remote_file01; echo "hello"> remote_file02; echo "hello"> remote_file03;""",
+    #                    "remote_subtask", 
+    #                           targets = ["/tmp/remote_file01",
+    #                                      "/tmp/remote_file02",
+    #                                      "/tmp/remote_file03",
                                          
                                          
-                                         ]
+    #                                      ]
 
-        )
+    #     )
     
-    rtas.set_task_fetch_files_iter(["/tmp/remote_file01",
-                                    "/tmp/remote_file02",
-                                    "/tmp/remote_file03",
+    # rtas.set_task_fetch_files_iter(["/tmp/remote_file01",
+    #                                 "/tmp/remote_file02",
+    #                                 "/tmp/remote_file03",
                                     
-                                    ],
-                                   "/tmp")
+    #                                 ],
+    #                                "/tmp")
                                    
-    rtas.set_task_local_step_post(local_step_post,
-                                  task_label,
-                                  "/tmp/remote_file01",
-                                  "/tmp/remote_file02",
-                                  "/tmp/remote_file03",
+    # rtas.set_task_local_step_post(local_step_post,
+    #                               task_label,
+    #                               "/tmp/remote_file01",
+    #                               "/tmp/remote_file02",
+    #                               "/tmp/remote_file03",
                                     
-                                  targets = [f"/tmp/{task_label}"
+    #                               targets = [f"/tmp/{task_label}"
 
-                                      ]
-                                  )
+    #                                   ]
+    #                               )
     yield from rtas
 
     pass

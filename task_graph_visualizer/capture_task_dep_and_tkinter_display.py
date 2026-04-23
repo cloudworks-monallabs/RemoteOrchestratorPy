@@ -6,7 +6,7 @@ from statistics import mean, median
 import tkinter as tk
 from idlelib.tooltip import Hovertip
 import pickle
-
+import random
         
 def get_task_dependencies_impl(command):
     try:
@@ -217,8 +217,12 @@ class task_graph_d3json:
             else:
                 adj_list = defaultdict(list)
                 for node in nodes:
-                    assert len(self.rev_adj_list[node]) == 1
-                    adj_list[self.rev_adj_list[node][0]].append(node)
+                    # its easy to place if there is only one parent 
+                    #assert len(self.rev_adj_list[node]) == 1
+                    # just choose the first parent
+
+                    parent_id = random.randrange(0, len(self.rev_adj_list[node]))
+                    adj_list[self.rev_adj_list[node][parent_id]].append(node)
 
                 for parent, childs in adj_list.items():
                     assert parent in self.quad_map
@@ -260,7 +264,12 @@ class task_graph_d3json:
 
     def draw_nodes(self, canvas):
         color_map = {'bootstrap_computenode': 'red',
-                     'setup_remote': 'blue'
+                     'setup_remote': 'blue',
+                     'deploy_nginx_binaries': 'yellow',
+                     'compile_build_nginx_unit': 'green',
+                     'bootstrap_deploy_binaries': 'orange',
+                     'deploy_nginx_unit_binaries': 'pink'
+                     
 
             }
         for node in self.nodes:

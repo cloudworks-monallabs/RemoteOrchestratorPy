@@ -160,3 +160,11 @@ pip-system-certs
      from doit_api import doit_config
 
      doit_config(continue_=True)
+
+
+
+
+#. doit_tasks_debug/doit_tasks should include tasks
+   - because ModuleTaskLoader will load all the task
+     - if the task is not loaded as part of ModuleTaskLoader
+       - then DoitExecutor will report task not found. 
