@@ -31,11 +31,11 @@ class ClientService(rpyc.Service):
     def on_connect(self, conn):
         # code that runs when a connection is created
         # (to init the service, if needed)
-        print("server connected")
+        #print("server connected")
         pass
 
     def on_disconnect(self, conn):
-        print("server disconnected")
+        #print("server disconnected")
         # code that runs after the connection has already closed
         # (to finalize the service, if needed)
         pass
@@ -91,7 +91,7 @@ def setup_remote_debian(rtas,
     """
 
     remote_task_append = rtas.set_task_remote_step_iter()
-    remote_task_append(f"mkdir {remote_workdir}", "create_workdir", uptodate=[run_once]
+    remote_task_append(f"mkdir -p {remote_workdir}", "create_workdir", uptodate=[run_once]
         )
 
     # assume python is already installed 
@@ -101,7 +101,7 @@ def setup_remote_debian(rtas,
     remote_task_append(f"cd {remote_workdir}; python3 -m venv venv", "create_python_venv", uptodate=[run_once]
         )
     # install rpyc
-    remote_task_append(f"cd {remote_workdir}; . ./venv/bin/activate; pip install rpyc wget", "install_modules", uptodate=[run_once]
+    remote_task_append(f"cd {remote_workdir}; . ./venv/bin/activate; pip install rpyc wget psutil", "install_modules", uptodate=[run_once]
                        )
 
     yield from rtas
@@ -155,7 +155,6 @@ exit 0
     # launch_service_fh.name<-- the temporary file path
     #.Path(launch_service_fh.name).name <-- basename 
     launch_service_basename = launch_rpyc_service_fp.name
-    print("launch_service_basename  == ", launch_service_basename)
     remote_task_append = rtas.set_task_remote_step_iter()
 
 
@@ -234,18 +233,18 @@ def setup_remote_openbsd(rtas,
     """
 
     remote_task_append = rtas.set_task_remote_step_iter()
-    remote_task_append(f"mkdir {remote_workdir}", "create_workdir", uptodate=[run_once]
+    remote_task_append(f"mkdir -p {remote_workdir}", "create_workdir", uptodate=[run_once]
         )
 
-    remote_task_append(f"doas pkg_add python-3.12.8p1 wget", "install_python", uptodate=[run_once]
+    remote_task_append(f"doas pkg_add -I python%3 wget", "install_python_wget", uptodate=[run_once]
         )
 
     remote_task_append(f"cd {remote_workdir}; /usr/local/bin/python3 -m venv venv", "create_python_venv", uptodate=[run_once]
         )
     # install rpyc, wget
     # TODO: faric reports failed
-    # remote_task_append(f"cd {remote_workdir}; . ./venv/bin/activate; pip install rpyc wget", "install_rpyc", uptodate=[run_once]
-    #                    )
+    remote_task_append(f"cd {remote_workdir}; . ./venv/bin/activate; pip install  --disable-pip-version-check rpyc wget", "install_rpyc", uptodate=[run_once]
+                       )
 
     yield from rtas
     
@@ -315,7 +314,7 @@ exit 0
         try: 
             with SshMachine(rtas.ipv6,
                             user = "adming",
-                            keyfile="/home/adming/.ssh/id_rsa"
+                            keyfile=remote_ssh_private_key #"/home/adming/.ssh/id_rsa"
                             ) as rem:
                 with rem.tunnel(local_port, service_port):
                     conn = rpyc.connect("localhost",
@@ -327,8 +326,11 @@ exit 0
                     conn.root.upload_module(localpath, remote_action_module_name)
                     rtas.rpyc_conn  = conn
                     yield
+                    logger.debug("Closing the rpyc connection")
+                    rtas.rpyc_conn.close()
         except Exception as e:
             logger.error(f"tunneling failed: {e}")
+            return False
         return True
 
     conn_resource_context = rpyc_conn_lifecycle(rtas)

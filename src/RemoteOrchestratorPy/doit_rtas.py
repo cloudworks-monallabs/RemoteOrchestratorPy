@@ -25,6 +25,7 @@ from doit_extntools import RemoteFilesDep, RemoteCommandError
 from pathlib import Path
 import logging
 from collections import defaultdict
+from .precompute_check_remote_files_exists import cache_remote_target_filepath
 
 # Create a defaultdict where each value is a dict
 logger = logging.getLogger(__name__)
@@ -40,6 +41,7 @@ def get_dangling_task( TASKGENFUNC, ipv6):
     return dangling_tasks[TASKGENFUNC.__name__][ipv6]
 
 def doit_taskify(all_rtas,
+                 leaf_barrier_task = True, 
                  **kwargs
                  ):
     """
@@ -75,7 +77,7 @@ def doit_taskify(all_rtas,
                     task_dep = []
                     if set_dangling_task_dep:
                         task_dep = [task for _tg in set_dangling_task_dep for task in get_dangling_task( _tg, rtas.ipv6)]
-                        print("set dangling_tasks = ", task_dep)
+                        #print("set dangling_tasks = ", task_dep)
 
                     rtas.set_super_task_seq(rtas_basename, task_dep=task_dep)
 
@@ -84,11 +86,10 @@ def doit_taskify(all_rtas,
                     all_rtas_tasks.extend(rtas.rtas_taskseq_labels)
                 else:
                     logger.info(f"RTAS-abort-taskgen: {rtas.ipv6}")
-                    print("aborted")
+                    print("=========== TASK aborted ===== ")
 
             # by default an rtas sequence 
             if kwargs.get("leaf_barrier_task", True):
-                print(f"adding leaf barrier {rtas_basename}: ", all_rtas_tasks)
                 trec = {'basename': rtas_basename,
                         'name': "_leaf_final_",
                         'actions': None,
@@ -132,7 +133,6 @@ def remote_exec_func(rtas, task_label, cmdl):
                                                   )
         #result = rtas.rpyc_conn.root.exec_action("remote_actions", "wget_url", f"https://cdn.openbsd.org/pub/OpenBSD/snapshots/arm64/man76.tgz")
         
-        result = "Downloded"
         logger.debug(f"result via rpyc = {result}")
         logger.debug(f"task_label = {task_label}")
 
@@ -145,21 +145,24 @@ def remote_exec_func(rtas, task_label, cmdl):
         return status
     
     except Exception as e:
-        logger.debug(f"exec_func failed {e}")
+        logger.debug(f"remote_exec_func failed {e}")
         rtas.remote_task_results[task_label] = ("Failed", str(e))
         # let action wrapper know that 
         raise e
 
 
+# after upgrade to trixie this has stopped working
+#@cache_remote_target_filepath
 def check_remote_files_exists(fabric_conn, remote_targets):
-    
-    for _fs in remote_targets:
-        if not exists(fabric_conn, _fs):
-            logger.info(
-                f"Path {_fs} does not exits")
-            return False
+    return False
+    # flop show after upgrade
+    # for _fs in remote_targets:
+    #     if not exists(fabric_conn, _fs):
+    #         logger.info(
+    #             f"Path {_fs} does not exits")
+    #         return False
 
-    return True
+    # return True
 
 def action_wrapper(rtas, action_func):
 
@@ -281,12 +284,11 @@ class RemoteTaskActionSequence:
 
         # update prefix task dep
         trec['task_dep'].extend(self.task_dep)
-        print("task_dep for local_step_pre = ", trec['task_dep'])
+
         self.task_dep = []
 
         self.task_local_step_pre = trec
-        #traceback.print_stack(file=sys.stdout)
-        print("whats wrong = ", self.basename, " ", self.task_local_step_pre)
+
         self.final_task = f"{self.basename}:local_step_pre"
         pass
 
@@ -564,7 +566,7 @@ class RemoteTaskActionSequence:
         def target_path(fileconfig, local_dir=local_dir):
             if fileconfig.target_path:
                 target_path = fileconfig.target_path
-                    
+                return target_path
             return local_dir/Path(fileconfig.file_path).name
             
         def fetch_task_iter():
@@ -658,7 +660,6 @@ class RemoteTaskActionSequence:
             pass
 
         if 'teardown' in kwargs:
-            print("teardown = ", kwargs.get('teardown'))
             trec['teardown'] = kwargs.get('teardown')
             
         self.task_local_step_post = trec
@@ -775,7 +776,7 @@ class RemoteTaskActionSequence:
 
         # all first task in the rtas
         # should have task dep to the prefix (aka setup) task
-        print(f"task dep for super {allroot_basename} : ", kwargs.get('task_dep'))
+
         self.task_dep = [f"{allroot_basename}:_root_enter_", *kwargs.get('task_dep', [])]
         # capture the results of remote task execution
         # Note: only the last executed rtas results are maintained

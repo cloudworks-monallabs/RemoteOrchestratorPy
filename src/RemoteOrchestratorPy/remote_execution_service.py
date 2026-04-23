@@ -9,12 +9,12 @@ class ExecutionService(rpyc.Service):
     def on_connect(self, conn):
         # code that runs when a connection is created
         # (to init the service, if needed)
-        print("client connected")
+        #print("client connected")
         self.conn = conn
         pass
 
     def on_disconnect(self, conn):
-        print("client disconnected")
+        #print("client disconnected")
         # code that runs after the connection has already closed
         # (to finalize the service, if needed)
         pass
