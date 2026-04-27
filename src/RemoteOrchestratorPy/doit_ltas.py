@@ -15,6 +15,7 @@ def action_wrapper(ltas, action_func):
 
     def wrapper(*args, **kwargs):
         if ltas.task_failed_abort_execution:
+            print("Skipping ", action_func)
             logger.info(f"LTAS-skip-task: task_failed_abort_execution is True")
             return False
         try:
@@ -61,20 +62,15 @@ def local_exec_func(ltas, task_label, cmdl):
     except Exception as e:
         logger.debug(f"local_exec_func failed {e}")
         ltas.local_task_results[task_label] = ("Failed", str(e))
-
         raise e
 
-def doit_taskify(ltas,
-                 **kwargs
+def ltas_taskify(ltas, **kwargs
                  ):
     """
-    all_rtas: list of RemoteTaskActionSequence. Each rtas represents a compte node on which to invoke action sequence
     """
-    
+
     def wrapper(func):
         """
-        convert a function to a rtas task sequence generator function.
-        prefix and suffix task will be added. 
         """
         ltas_basename = func.__name__
         func.__root_enter_task_label__ = f"{ltas_basename}:_root_enter_"
@@ -84,8 +80,8 @@ def doit_taskify(ltas,
             trec = {'basename': ltas_basename,
                     'name': "_root_enter_",
                     'actions': None,
-                    'task_dep': kwargs.get('task_dep', [])
-
+                    **kwargs
+                    #TODO: file_dep, uptodate, 
                     }
             yield trec
 
@@ -141,7 +137,7 @@ class LocalTaskActionSequence:
         self.task_failed_exception = None
         self.os_type = kwargs.get("os_type", "openbsd")
 
-    def set_task_local_step_iter(self):
+    def get_step_adder(self):
         """
         """
 

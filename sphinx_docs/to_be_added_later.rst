@@ -1,3 +1,38 @@
+#. Getting the caching of md5sum precompute and caching correct
+   - add this 
+   .. code-block::
+       precompute_remote_files_md5(rtas_by_ip)
+
+   - before
+     .. code-block::
+	doit_main = DoitMain(ModuleTaskLoader(doit_tasks))
+        precompute_remote_files_md5(rtas_by_ip)
+        doit_main.run(sys.argv[1:]
+                      )
+
+   - whre
+     .. code-block::	
+	rtas_by_ip = { netboot_CCCmachine_ip: netboot_CCCmachine_rtas
+	}
+    
+
+#. DOIT_CONFIG options
+   - 'reporter'
+     
+#. Capture and report execution failure
+   - for ltas
+   .. code-block::
+      if ltas.task_failed_abort_execution:
+        raise RTASExecutionError(str(ltas.task_failed_exception), ltas)
+
+   - for rtas
+     .. code-block::
+	for ip, rtas in rtas_by_ip.items():
+	if rtas.task_failed_abort_execution:
+	raise RTASExecutionError(str(rtas.task_failed_exception), rtas)
+
+	
+
 #. rtas is dag
    - our notion of dag is running 
      - top to bottom

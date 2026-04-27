@@ -29,19 +29,12 @@ class ClientService(rpyc.Service):
         pass
 
     def on_connect(self, conn):
-        # code that runs when a connection is created
-        # (to init the service, if needed)
-        #print("server connected")
         pass
 
     def on_disconnect(self, conn):
-        #print("server disconnected")
-        # code that runs after the connection has already closed
-        # (to finalize the service, if needed)
         pass
 
     def exposed_file_reader(self, localpath, chunk_size=STREAM_CHUNK):
-        logger.debug(f" read file {localpath}")
         assert isinstance(localpath, Path)
         
         with localpath.open("rb") as lfh:
@@ -55,21 +48,23 @@ class ClientService(rpyc.Service):
     pass
 
         
-def init_connection(conn_resource_context):
+def init_connection(rpyc_conn_lifecycle, rtas):
     try:
         # Start the generator to initialize the resource
         logger.debug(" connect to remote")
+        conn_resource_context = rpyc_conn_lifecycle(rtas)
+        rtas.conn_resource_context = conn_resource_context
         next(conn_resource_context)
     except StopIteration:
         #raise RuntimeError("Resource generator is already exhausted.")
         pass
 
     pass
-def teardown_connection(conn_resource_context):
+def teardown_connection(rtas):
     try:
         # Finalize the generator to clean up resources
-        logger.debug("Finally closing rpyc server and client conn")
-        next(conn_resource_context)
+        logger.debug("Closing rpyc server and SshMachine connection")
+        next(rtas.conn_resource_context)
     except StopIteration:
         pass
     pass
@@ -151,16 +146,10 @@ exit 0
                                    ],
                                   Path(remote_workdir)
                                   )
-    # launch_service_fh<-- named temporary files
-    # launch_service_fh.name<-- the temporary file path
-    #.Path(launch_service_fh.name).name <-- basename 
+
     launch_service_basename = launch_rpyc_service_fp.name
     remote_task_append = rtas.set_task_remote_step_iter()
 
-
-
-    # start server
-    #command = f"nohup python3 /tmp/remote_execution_service.py {service_port} > /tmp/run.log 2>&1 &  echo $!"
 
     def teardown(rtas):
         task_label = f"{rtas.basename}:remote_step:launch_rpyc"
@@ -170,7 +159,8 @@ exit 0
 
     # remote_task_append(f"cd {remote_workdir}; . ./venv/bin/activate; {command}", "launch_rpyc", teardown=[(teardown, [rtas])]
     #     )
-    remote_task_append(f"cd {remote_workdir}; sh {launch_service_basename}", "launch_rpyc", teardown=[(teardown, [rtas])]
+    remote_task_append(f"cd {remote_workdir}; sh {launch_service_basename}", "launch_rpyc",
+                       teardown=[(teardown, [rtas])]
                        )
 
     # connect to remote rpyc and upload remote module
@@ -179,7 +169,7 @@ exit 0
             
             with SshMachine(rtas.ipv6,
                             user = "adming",
-                            keyfile="/home/adming/.ssh/id_rsa"
+                            keyfile=remote_ssh_private_key
                             ) as rem:
                 with rem.tunnel(local_port, service_port) as tunnel:
                     conn = rpyc.connect("localhost",
@@ -203,12 +193,17 @@ exit 0
 
 
 
-    conn_resource_context = rpyc_conn_lifecycle(rtas)
+    #conn_resource_context = rpyc_conn_lifecycle(rtas)
     
     rtas.set_task_local_step_post(init_connection,
-                                  conn_resource_context,
-                                  #uptodate=[run_once]
-                                  #teardown = [teardown_connection, (conn_resource_context)]
+                                  rpyc_conn_lifecycle,
+                                  rtas, 
+                                  #conn_resource_context,
+                                  #uptodate=[run_once],
+                                  teardown = [(teardown_connection,
+                                              [rtas]
+                                              )
+                                              ]
                                   
                                   )
 

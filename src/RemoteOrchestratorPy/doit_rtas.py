@@ -40,7 +40,7 @@ def get_dangling_task( TASKGENFUNC, ipv6):
     assert TASKGENFUNC.__name__ in dangling_tasks
     return dangling_tasks[TASKGENFUNC.__name__][ipv6]
 
-def doit_taskify(all_rtas,
+def rtas_taskify(all_rtas,
                  leaf_barrier_task = True, 
                  **kwargs
                  ):
@@ -152,17 +152,15 @@ def remote_exec_func(rtas, task_label, cmdl):
 
 
 # after upgrade to trixie this has stopped working
-#@cache_remote_target_filepath
+@cache_remote_target_filepath
 def check_remote_files_exists(fabric_conn, remote_targets):
-    return False
-    # flop show after upgrade
-    # for _fs in remote_targets:
-    #     if not exists(fabric_conn, _fs):
-    #         logger.info(
-    #             f"Path {_fs} does not exits")
-    #         return False
+    for _fs in remote_targets:
+        if not exists(fabric_conn, _fs):
+            logger.info(
+                f"Path {_fs} does not exits")
+            return False
 
-    # return True
+    return True
 
 def action_wrapper(rtas, action_func):
 

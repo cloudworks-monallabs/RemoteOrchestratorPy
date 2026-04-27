@@ -1,13 +1,13 @@
 # app_config.toml
 
 [connection]
-target_server_ip = "192.168.0.102"
+target_server_ip = "192.168.0.139"
 user = "adming"
 
 [paths]
 remote_workdir = "/home/adming/deployment_store"
 # The local working directory for the deployment service
-local_workdir = "/mnt/zfs_pool/adming_extended/adming_skullsaints_home/adming/DrivingRange/CloudWorks/test_remote_orchestor_py"
+local_workdir = "/mnt/zfs_pool/adming_extended/adming_skullsaints_home/adming/DrivingRange/CloudWorks/test_remote_orchestor_py "
 cluster_resources_datadir = "/mnt/zfs_pool/adming_extended/adming_skullsaints_home/adming/cluster_resources/test_remote_orchestor_py"
 adming_public_key_file = "adming_ssh_rsa_public_key"
 
