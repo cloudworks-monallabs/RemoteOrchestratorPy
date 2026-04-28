@@ -1,3 +1,10 @@
+#. Doit config and continue (this is important for some reason)
+   
+   .. code-block::
+      from doit_api import doit_config
+
+      doit_config(continue_=True)
+
 #. Getting the caching of md5sum precompute and caching correct
    - add this 
    .. code-block::
