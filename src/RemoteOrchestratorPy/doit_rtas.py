@@ -131,9 +131,8 @@ def remote_exec_func(rtas, task_label, cmdl):
                                                  *cmdl[1],
                                                  **cmdl[2]
                                                   )
-        #result = rtas.rpyc_conn.root.exec_action("remote_actions", "wget_url", f"https://cdn.openbsd.org/pub/OpenBSD/snapshots/arm64/man76.tgz")
-        
-        logger.debug(f"result via rpyc = {result}")
+        rtas.remote_task_results[task_label] = ("Success", result)
+        logger.debug(f"result via rpyc = {result} ")
         logger.debug(f"task_label = {task_label}")
 
         status = log_command_exec_status_rpyc(cmdl[0],
