@@ -160,7 +160,7 @@ exit 0
     # remote_task_append(f"cd {remote_workdir}; . ./venv/bin/activate; {command}", "launch_rpyc", teardown=[(teardown, [rtas])]
     #     )
     remote_task_append(f"cd {remote_workdir}; sh {launch_service_basename}", "launch_rpyc",
-                       teardown=[(teardown, [rtas])]
+                       teardown=[(teardown, [rtas])] 
                        )
 
     # connect to remote rpyc and upload remote module

@@ -7,6 +7,7 @@ Things to keep in mind:
 - consistent naming
 - uptodate
 """
+import copy
 import traceback
 import sys
 import functools
@@ -691,7 +692,6 @@ class RemoteTaskActionSequence:
             yield self.task_ship_files_prefix
             yield from self.task_ship_files_iter
             yield self.task_ship_files_group
-
             
         if  self.task_remote_step:
             if task_curr:

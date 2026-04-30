@@ -22,8 +22,15 @@ logger = logging.getLogger(__name__)
         
 def get_ref_name(trec):
     """
+    
     """
-    return f"""{trec['basename']}:{trec['name']}"""
+    # once trec is handed over to pydoit modifies the trec
+    # basename is removed and name is the fully qualified name
+    if 'basename' in trec:
+        
+        return f"""{trec['basename']}:{trec['name']}"""
+
+    return trec['name']
 
 
 def ship_file(fabric_conn,
